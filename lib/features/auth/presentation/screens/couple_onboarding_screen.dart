@@ -15,9 +15,6 @@ class _CoupleOnboardingScreenState
     extends ConsumerState<CoupleOnboardingScreen> {
   final _partnerController = TextEditingController();
   final _inviteController = TextEditingController();
-  var _relationshipStartDate = DateTime.now().subtract(
-    const Duration(days: 365),
-  );
 
   @override
   void dispose() {
@@ -28,7 +25,8 @@ class _CoupleOnboardingScreenState
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(sessionControllerProvider).currentUser;
+    final session = ref.watch(sessionControllerProvider);
+    final user = session.currentUser;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Couple Calendar')),
@@ -49,6 +47,10 @@ class _CoupleOnboardingScreenState
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
+            if (session.errorMessage != null) ...[
+              const SizedBox(height: 16),
+              _ErrorBanner(message: session.errorMessage!),
+            ],
             const SizedBox(height: 24),
             _OnboardingPanel(
               title: '새 커플 공간 만들기',
@@ -63,15 +65,6 @@ class _CoupleOnboardingScreenState
                   textInputAction: TextInputAction.done,
                 ),
                 const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.event_outlined),
-                  title: const Text('처음 만난 날 또는 사귄 날'),
-                  subtitle: Text(_dateLabel(_relationshipStartDate)),
-                  trailing: const Icon(Icons.edit_calendar_outlined),
-                  onTap: _pickRelationshipDate,
-                ),
-                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
@@ -80,7 +73,6 @@ class _CoupleOnboardingScreenState
                           .read(sessionControllerProvider.notifier)
                           .createDemoCouple(
                             partnerName: _partnerController.text,
-                            relationshipStartDate: _relationshipStartDate,
                           );
                     },
                     icon: const Icon(Icons.add),
@@ -121,18 +113,26 @@ class _CoupleOnboardingScreenState
       ),
     );
   }
+}
 
-  Future<void> _pickRelationshipDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _relationshipStartDate,
-      firstDate: DateTime(1990),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        message,
+        style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+      ),
     );
-    if (picked == null) {
-      return;
-    }
-    setState(() => _relationshipStartDate = picked);
   }
 }
 
@@ -177,8 +177,4 @@ class _OnboardingPanel extends StatelessWidget {
       ),
     );
   }
-}
-
-String _dateLabel(DateTime value) {
-  return '${value.year}.${value.month.toString().padLeft(2, '0')}.${value.day.toString().padLeft(2, '0')}';
 }

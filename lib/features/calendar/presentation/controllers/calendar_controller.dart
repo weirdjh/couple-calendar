@@ -4,6 +4,7 @@ import '../../../../core/time/calendar_date_utils.dart';
 import '../../../../core/firebase/firebase_bootstrap.dart';
 import '../../../auth/presentation/controllers/session_controller.dart';
 import '../../data/repositories/calendar_event_repository.dart';
+import '../../data/repositories/api_calendar_event_repository.dart';
 import '../../data/repositories/firestore_calendar_event_repository.dart';
 import '../../data/repositories/mock_calendar_event_repository.dart';
 import '../../domain/models/calendar_event.dart';
@@ -12,6 +13,9 @@ import '../../domain/models/event_input.dart';
 final calendarEventRepositoryProvider = Provider<CalendarEventRepository>((
   ref,
 ) {
+  if (useApi) {
+    return ApiCalendarEventRepository(baseUrl: apiBaseUrl);
+  }
   if (useFirebase) {
     return FirestoreCalendarEventRepository();
   }
@@ -120,6 +124,24 @@ class CalendarController extends Notifier<CalendarState> {
     await _loadVisibleMonth();
   }
 
+  Future<void> goToMonth(DateTime month) async {
+    final targetMonth = monthStart(month);
+    state = state.copyWith(
+      focusedMonth: targetMonth,
+      selectedDate: targetMonth,
+      clearError: true,
+    );
+    await _loadVisibleMonth();
+  }
+
+  Future<void> goToToday() {
+    return selectDate(DateTime.now());
+  }
+
+  Future<void> refreshVisibleMonth() {
+    return _loadVisibleMonth();
+  }
+
   Future<CalendarEvent?> createEvent(EventInput input) async {
     final session = ref.read(sessionControllerProvider);
     final user = session.currentUser;
@@ -132,6 +154,10 @@ class CalendarController extends Notifier<CalendarState> {
       state = state.copyWith(errorMessage: '제목을 입력해 주세요.');
       return null;
     }
+    if (!input.endAt.isAfter(input.startAt)) {
+      state = state.copyWith(errorMessage: '종료 일시는 시작 일시보다 뒤여야 해요.');
+      return null;
+    }
     state = state.copyWith(isSaving: true, clearError: true);
     try {
       final event = await _repository.createEvent(
@@ -139,11 +165,12 @@ class CalendarController extends Notifier<CalendarState> {
         userId: user.id,
         input: input,
       );
-      await _loadVisibleMonth();
       state = state.copyWith(
         selectedDate: dateOnly(input.startAt),
-        isSaving: false,
+        focusedMonth: monthStart(input.startAt),
       );
+      await _loadVisibleMonth();
+      state = state.copyWith(isSaving: false);
       return event;
     } catch (_) {
       state = state.copyWith(isSaving: false, errorMessage: '일정을 저장하지 못했어요.');
@@ -155,8 +182,10 @@ class CalendarController extends Notifier<CalendarState> {
     required String eventId,
     required EventInput input,
   }) async {
-    final couple = ref.read(sessionControllerProvider).currentCouple;
-    if (couple == null) {
+    final session = ref.read(sessionControllerProvider);
+    final user = session.currentUser;
+    final couple = session.currentCouple;
+    if (user == null || couple == null) {
       state = state.copyWith(errorMessage: '커플 공간을 먼저 연결해 주세요.');
       return null;
     }
@@ -167,6 +196,14 @@ class CalendarController extends Notifier<CalendarState> {
     }
     if (input.title.trim().isEmpty) {
       state = state.copyWith(errorMessage: '제목을 입력해 주세요.');
+      return null;
+    }
+    if (!input.endAt.isAfter(input.startAt)) {
+      state = state.copyWith(errorMessage: '종료 일시는 시작 일시보다 뒤여야 해요.');
+      return null;
+    }
+    if (!event.canEditFor(user.id)) {
+      state = state.copyWith(errorMessage: '상대 일정은 수정할 수 없어요.');
       return null;
     }
 
@@ -194,13 +231,19 @@ class CalendarController extends Notifier<CalendarState> {
     try {
       final updated = await _repository.updateEvent(
         coupleId: couple.id,
+        userId: user.id,
         event: event.copyWith(
           title: input.title.trim(),
           startAt: input.startAt,
           endAt: input.endAt,
           isAllDay: input.isAllDay,
           memo: input.memo.trim(),
+          kind: input.kind,
           colorValue: input.colorValue,
+          ownership: input.ownership,
+          ownerUserId: input.ownership == EventOwnership.shared
+              ? event.effectiveOwnerUserId
+              : user.id,
           reminders: reminders,
           linkedItems: input.linkedItems,
         ),
@@ -222,8 +265,10 @@ class CalendarController extends Notifier<CalendarState> {
     required String eventId,
     required LinkedItem linkedItem,
   }) async {
-    final couple = ref.read(sessionControllerProvider).currentCouple;
-    if (couple == null) {
+    final session = ref.read(sessionControllerProvider);
+    final user = session.currentUser;
+    final couple = session.currentCouple;
+    if (user == null || couple == null) {
       state = state.copyWith(errorMessage: '커플 공간을 먼저 연결해 주세요.');
       return null;
     }
@@ -231,6 +276,10 @@ class CalendarController extends Notifier<CalendarState> {
     final event = state.events.where((item) => item.id == eventId).firstOrNull;
     if (event == null) {
       state = state.copyWith(errorMessage: '일정을 찾을 수 없어요.');
+      return null;
+    }
+    if (!event.canEditFor(user.id)) {
+      state = state.copyWith(errorMessage: '상대 일정에는 링크를 추가할 수 없어요.');
       return null;
     }
 
@@ -246,7 +295,13 @@ class CalendarController extends Notifier<CalendarState> {
     try {
       final updated = await _repository.updateEvent(
         coupleId: couple.id,
-        event: event.copyWith(linkedItems: [...event.linkedItems, linkedItem]),
+        userId: user.id,
+        event: event.copyWith(
+          kind: linkedItem.type == LinkedItemType.dateRecord
+              ? CalendarEventKind.date
+              : event.kind,
+          linkedItems: [...event.linkedItems, linkedItem],
+        ),
       );
       await _loadVisibleMonth();
       state = state.copyWith(isSaving: false);
@@ -261,8 +316,10 @@ class CalendarController extends Notifier<CalendarState> {
     required String eventId,
     required LinkedItem linkedItem,
   }) async {
-    final couple = ref.read(sessionControllerProvider).currentCouple;
-    if (couple == null) {
+    final session = ref.read(sessionControllerProvider);
+    final user = session.currentUser;
+    final couple = session.currentCouple;
+    if (user == null || couple == null) {
       state = state.copyWith(errorMessage: '커플 공간을 먼저 연결해 주세요.');
       return null;
     }
@@ -272,11 +329,16 @@ class CalendarController extends Notifier<CalendarState> {
       state = state.copyWith(errorMessage: '일정을 찾을 수 없어요.');
       return null;
     }
+    if (!event.canEditFor(user.id)) {
+      state = state.copyWith(errorMessage: '상대 일정의 링크는 해제할 수 없어요.');
+      return null;
+    }
 
     state = state.copyWith(isSaving: true, clearError: true);
     try {
       final updated = await _repository.updateEvent(
         coupleId: couple.id,
+        userId: user.id,
         event: event.copyWith(
           linkedItems: event.linkedItems
               .where(
@@ -297,14 +359,29 @@ class CalendarController extends Notifier<CalendarState> {
   }
 
   Future<void> deleteEvent(String eventId) async {
-    final couple = ref.read(sessionControllerProvider).currentCouple;
-    if (couple == null) {
+    final session = ref.read(sessionControllerProvider);
+    final user = session.currentUser;
+    final couple = session.currentCouple;
+    if (user == null || couple == null) {
       state = state.copyWith(errorMessage: '커플 공간을 먼저 연결해 주세요.');
+      return;
+    }
+    final event = state.events.where((item) => item.id == eventId).firstOrNull;
+    if (event == null) {
+      state = state.copyWith(errorMessage: '일정을 찾을 수 없어요.');
+      return;
+    }
+    if (!event.canEditFor(user.id)) {
+      state = state.copyWith(errorMessage: '상대 일정은 삭제할 수 없어요.');
       return;
     }
     state = state.copyWith(isSaving: true, clearError: true);
     try {
-      await _repository.deleteEvent(coupleId: couple.id, eventId: eventId);
+      await _repository.deleteEvent(
+        coupleId: couple.id,
+        eventId: eventId,
+        userId: user.id,
+      );
       await _loadVisibleMonth();
       state = state.copyWith(isSaving: false);
     } catch (_) {
@@ -312,16 +389,60 @@ class CalendarController extends Notifier<CalendarState> {
     }
   }
 
+  Future<CalendarEvent?> toggleWatchEvent(String eventId) async {
+    final session = ref.read(sessionControllerProvider);
+    final user = session.currentUser;
+    final couple = session.currentCouple;
+    if (user == null || couple == null) {
+      state = state.copyWith(errorMessage: '커플 공간을 먼저 연결해 주세요.');
+      return null;
+    }
+
+    final event = state.events.where((item) => item.id == eventId).firstOrNull;
+    if (event == null) {
+      state = state.copyWith(errorMessage: '일정을 찾을 수 없어요.');
+      return null;
+    }
+    if (!event.isPartnerOwnedFor(user.id)) {
+      state = state.copyWith(errorMessage: '상대 일정만 지켜볼 수 있어요.');
+      return null;
+    }
+
+    final watchers = event.isWatchedBy(user.id)
+        ? event.watcherUserIds.where((id) => id != user.id).toList()
+        : [...event.watcherUserIds, user.id];
+
+    state = state.copyWith(isSaving: true, clearError: true);
+    try {
+      final updated = await _repository.updateEvent(
+        coupleId: couple.id,
+        userId: user.id,
+        event: event.copyWith(watcherUserIds: watchers),
+      );
+      await _loadVisibleMonth();
+      state = state.copyWith(isSaving: false);
+      return updated;
+    } catch (_) {
+      state = state.copyWith(
+        isSaving: false,
+        errorMessage: '지켜보기 설정을 바꾸지 못했어요.',
+      );
+      return null;
+    }
+  }
+
   Future<void> _loadVisibleMonth() async {
     final couple = ref.read(sessionControllerProvider).currentCouple;
-    if (couple == null) {
+    final user = ref.read(sessionControllerProvider).currentUser;
+    if (couple == null || user == null) {
       state = state.copyWith(events: const [], isLoading: false);
       return;
     }
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final events = await _repository.watchEvents(
+      final events = await _repository.fetchEvents(
         coupleId: couple.id,
+        userId: user.id,
         visibleRange: visibleMonthRange(state.focusedMonth),
       );
       state = state.copyWith(events: events, isLoading: false);

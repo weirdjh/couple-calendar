@@ -5,7 +5,7 @@ class DateRange {
   final DateTime end;
 
   bool overlaps(DateTime startAt, DateTime endAt) {
-    return startAt.isBefore(end) && !endAt.isBefore(start);
+    return startAt.isBefore(end) && endAt.isAfter(start);
   }
 }
 
@@ -52,4 +52,38 @@ String formatDateLabel(DateTime value) {
 
 String formatTimeLabel(DateTime value) {
   return '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+}
+
+String formatEventRangeLabel({
+  required DateTime startAt,
+  required DateTime endAt,
+  required bool isAllDay,
+}) {
+  if (isAllDay) {
+    final inclusiveEnd = dateOnly(endAt).subtract(const Duration(days: 1));
+    if (isSameDate(startAt, inclusiveEnd)) {
+      return '${formatDateLabel(startAt)} · 하루 종일';
+    }
+    return '${formatDateLabel(startAt)} - ${formatDateLabel(inclusiveEnd)} · 하루 종일';
+  }
+
+  if (isSameDate(startAt, endAt)) {
+    return '${formatDateLabel(startAt)} ${formatTimeLabel(startAt)} - ${formatTimeLabel(endAt)}';
+  }
+  return '${formatDateLabel(startAt)} ${formatTimeLabel(startAt)} - ${formatDateLabel(endAt)} ${formatTimeLabel(endAt)}';
+}
+
+String formatEventDateRangeLabel({
+  required DateTime startAt,
+  required DateTime endAt,
+  required bool isAllDay,
+}) {
+  final start = dateOnly(startAt);
+  final end = isAllDay
+      ? dateOnly(endAt).subtract(const Duration(days: 1))
+      : dateOnly(endAt);
+  if (isSameDate(start, end)) {
+    return formatDateLabel(start);
+  }
+  return '${formatDateLabel(start)} - ${formatDateLabel(end)}';
 }

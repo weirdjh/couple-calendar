@@ -3,8 +3,9 @@ import '../../domain/models/calendar_event.dart';
 import '../../domain/models/event_input.dart';
 
 abstract class CalendarEventRepository {
-  Future<List<CalendarEvent>> watchEvents({
+  Future<List<CalendarEvent>> fetchEvents({
     required String coupleId,
+    required String userId,
     required DateRange visibleRange,
   });
 
@@ -16,8 +17,13 @@ abstract class CalendarEventRepository {
 
   Future<CalendarEvent> updateEvent({
     required String coupleId,
+    required String userId,
     required CalendarEvent event,
   });
 
-  Future<void> deleteEvent({required String coupleId, required String eventId});
+  Future<void> deleteEvent({
+    required String coupleId,
+    required String eventId,
+    required String userId,
+  });
 }

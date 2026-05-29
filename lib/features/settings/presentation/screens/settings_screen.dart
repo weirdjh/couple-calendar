@@ -33,12 +33,17 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 12),
-            const _SettingsSection(
+            _SettingsSection(
               title: '데이터',
               children: [
                 _InfoRow(
                   label: '저장소',
-                  value: useFirebase ? 'Firestore' : 'Mock repository',
+                  value: switch (appDataMode) {
+                    AppDataMode.api => 'API server',
+                    AppDataMode.mock => 'Mock repository',
+                    AppDataMode.firebase =>
+                      useFirebaseEmulator ? 'Firebase emulator' : 'Firebase',
+                  },
                 ),
                 _InfoRow(label: 'Firebase 설정', value: '대기 중'),
               ],

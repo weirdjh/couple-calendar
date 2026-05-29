@@ -10,7 +10,7 @@ void main() {
       coupleId: 'c1',
       title: '처음 만난 날',
       baseDate: DateTime(2026),
-      kind: AnniversaryKind.firstMet,
+      repeatRule: AnniversaryRepeatRule.every100Days,
       createdBy: 'u1',
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
@@ -31,7 +31,7 @@ void main() {
       coupleId: 'c1',
       title: '사귄 날',
       baseDate: DateTime(2024, 5, 4),
-      kind: AnniversaryKind.relationshipStart,
+      repeatRule: AnniversaryRepeatRule.yearly,
       createdBy: 'u1',
       createdAt: DateTime(2024, 5, 4),
       updatedAt: DateTime(2024, 5, 4),
@@ -44,5 +44,27 @@ void main() {
 
     expect(occurrences.single.label, '2주년');
     expect(occurrences.single.date, DateTime(2026, 5, 4));
+  });
+
+  test('calculates yearly lunar birthday as a solar calendar date', () {
+    final anniversary = Anniversary(
+      id: 'a1',
+      coupleId: 'c1',
+      title: '음력 생신',
+      baseDate: DateTime(2023, 7, 14),
+      calendarType: AnniversaryCalendarType.lunar,
+      repeatRule: AnniversaryRepeatRule.yearly,
+      createdBy: 'u1',
+      createdAt: DateTime(2023, 8, 29),
+      updatedAt: DateTime(2023, 8, 29),
+    );
+
+    final occurrences = calculateAnniversaryOccurrences(
+      anniversary: anniversary,
+      visibleRange: DateRange(start: DateTime(2024, 8), end: DateTime(2024, 9)),
+    );
+
+    expect(occurrences.single.label, '1주년');
+    expect(occurrences.single.date, DateTime(2024, 8, 17));
   });
 }

@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Local Docker/Firebase emulator state
+/config/local/firebase-data/
+/config/local/*.log
+
 # Symbolication related
 app.*.symbols
 

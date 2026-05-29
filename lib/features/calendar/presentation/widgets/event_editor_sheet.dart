@@ -14,6 +14,8 @@ Future<void> showEventEditorSheet({
   String initialMemo = '',
   bool initialIsAllDay = false,
   int initialColorValue = 0xFF4D7C8A,
+  EventOwnership initialOwnership = EventOwnership.personal,
+  DateTime? initialEndAt,
   int? initialDurationHours,
   int? initialReminderOffsetMinutes = 60,
   List<LinkedItem> initialLinkedItems = const [],
@@ -31,6 +33,8 @@ Future<void> showEventEditorSheet({
         initialMemo: initialMemo,
         initialIsAllDay: initialIsAllDay,
         initialColorValue: initialColorValue,
+        initialOwnership: initialOwnership,
+        initialEndAt: initialEndAt,
         initialDurationHours: initialDurationHours,
         initialReminderOffsetMinutes: initialReminderOffsetMinutes,
         initialLinkedItems: initialLinkedItems,
@@ -51,6 +55,8 @@ class EventEditorSheet extends StatefulWidget {
     this.initialMemo = '',
     this.initialIsAllDay = false,
     this.initialColorValue = 0xFF4D7C8A,
+    this.initialOwnership = EventOwnership.personal,
+    this.initialEndAt,
     this.initialDurationHours,
     this.initialReminderOffsetMinutes = 60,
     this.initialLinkedItems = const [],
@@ -66,6 +72,8 @@ class EventEditorSheet extends StatefulWidget {
   final String initialMemo;
   final bool initialIsAllDay;
   final int initialColorValue;
+  final EventOwnership initialOwnership;
+  final DateTime? initialEndAt;
   final int? initialDurationHours;
   final int? initialReminderOffsetMinutes;
   final List<LinkedItem> initialLinkedItems;
@@ -80,14 +88,14 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
   final _titleController = TextEditingController();
   final _memoController = TextEditingController();
   final _linkedItems = <LinkedItem>[];
-  late var _eventDate = dates.dateOnly(widget.initialDate);
+  late var _startDate = dates.dateOnly(widget.initialDate);
   late var _isAllDay = widget.initialIsAllDay;
-  late var _startHour = widget.initialDate.hour == 0
-      ? 19
-      : widget.initialDate.hour;
-  late var _durationHours = widget.initialDurationHours ?? 2;
+  late var _startTime = _initialStartTime();
+  late var _endDate = _initialEndDate();
+  late var _endTime = _initialEndTime();
   late int? _reminderOffsetMinutes = widget.initialReminderOffsetMinutes;
   late var _colorValue = widget.initialColorValue;
+  late var _ownership = widget.initialOwnership;
   var _isSaving = false;
 
   @override
@@ -146,13 +154,22 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 12),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.event_outlined),
-                title: const Text('날짜'),
-                subtitle: Text(dates.formatDateLabel(_eventDate)),
-                trailing: const Icon(Icons.edit_calendar_outlined),
-                onTap: _pickDate,
+              _DateTimeRow(
+                label: '시작',
+                date: _startDate,
+                time: _startTime,
+                showTime: !_isAllDay,
+                onPickDate: () => _pickDate(isStart: true),
+                onPickTime: () => _pickTime(isStart: true),
+              ),
+              const SizedBox(height: 8),
+              _DateTimeRow(
+                label: '종료',
+                date: _endDate,
+                time: _endTime,
+                showTime: !_isAllDay,
+                onPickDate: () => _pickDate(isStart: false),
+                onPickTime: () => _pickTime(isStart: false),
               ),
               const SizedBox(height: 4),
               SwitchListTile(
@@ -161,36 +178,7 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
                 value: _isAllDay,
                 onChanged: (value) => setState(() => _isAllDay = value),
               ),
-              if (!_isAllDay) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: _NumberPickerField(
-                        label: '시작',
-                        value: _startHour,
-                        min: 0,
-                        max: 23,
-                        suffix: '시',
-                        onChanged: (value) =>
-                            setState(() => _startHour = value),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _NumberPickerField(
-                        label: '길이',
-                        value: _durationHours,
-                        min: 1,
-                        max: 12,
-                        suffix: '시간',
-                        onChanged: (value) =>
-                            setState(() => _durationHours = value),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-              ],
+              const SizedBox(height: 12),
               TextField(
                 controller: _memoController,
                 decoration: const InputDecoration(
@@ -199,6 +187,32 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
                 ),
                 minLines: 2,
                 maxLines: 4,
+              ),
+              const SizedBox(height: 14),
+              Text('소유', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              SegmentedButton<EventOwnership>(
+                segments: const [
+                  ButtonSegment(
+                    value: EventOwnership.personal,
+                    icon: Icon(Icons.person_outline),
+                    label: Text('내 일정'),
+                  ),
+                  ButtonSegment(
+                    value: EventOwnership.shared,
+                    icon: Icon(Icons.favorite_outline),
+                    label: Text('우리 일정'),
+                  ),
+                ],
+                selected: {_ownership},
+                onSelectionChanged: (selection) {
+                  setState(() {
+                    _ownership = selection.single;
+                    _colorValue = _ownership == EventOwnership.shared
+                        ? 0xFF7C6A9E
+                        : 0xFF4D7C8A;
+                  });
+                },
               ),
               const SizedBox(height: 14),
               Text('색상', style: Theme.of(context).textTheme.titleSmall),
@@ -246,7 +260,7 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
                   children: [
                     ..._linkedItems.map((item) {
                       return InputChip(
-                        avatar: Text(linkedItemEmoji(item.type)),
+                        avatar: Icon(linkedItemTypeIcon(item.type), size: 18),
                         label: Text(item.title),
                         onDeleted: () =>
                             setState(() => _linkedItems.remove(item)),
@@ -254,7 +268,7 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
                     }),
                     ...widget.previewLinkedItems.map((item) {
                       return Chip(
-                        avatar: Text(linkedItemEmoji(item.type)),
+                        avatar: Icon(linkedItemTypeIcon(item.type), size: 18),
                         label: Text('${item.title} 예정'),
                       );
                     }),
@@ -291,17 +305,83 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
     );
   }
 
-  Future<void> _pickDate() async {
+  DateTime _initialEndDate() {
+    final endAt = widget.initialEndAt;
+    if (endAt == null) {
+      return dates.dateOnly(_defaultEndAt());
+    }
+    if (widget.initialIsAllDay) {
+      return dates.dateOnly(endAt).subtract(const Duration(days: 1));
+    }
+    return dates.dateOnly(endAt);
+  }
+
+  TimeOfDay _initialStartTime() {
+    if (widget.initialDate.hour == 0 && widget.initialDate.minute == 0) {
+      return const TimeOfDay(hour: 19, minute: 0);
+    }
+    return TimeOfDay.fromDateTime(widget.initialDate);
+  }
+
+  TimeOfDay _initialEndTime() {
+    final endAt = widget.initialEndAt;
+    if (endAt != null) {
+      return TimeOfDay.fromDateTime(endAt);
+    }
+    return TimeOfDay.fromDateTime(_defaultEndAt());
+  }
+
+  DateTime _defaultEndAt() {
+    final start = DateTime(
+      _startDate.year,
+      _startDate.month,
+      _startDate.day,
+      _startTime.hour,
+      _startTime.minute,
+    );
+    return start.add(Duration(hours: widget.initialDurationHours ?? 2));
+  }
+
+  Future<void> _pickDate({required bool isStart}) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _eventDate,
+      initialDate: isStart ? _startDate : _endDate,
       firstDate: DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
     );
     if (picked == null) {
       return;
     }
-    setState(() => _eventDate = dates.dateOnly(picked));
+    setState(() {
+      final pickedDate = dates.dateOnly(picked);
+      if (isStart) {
+        final delta = pickedDate.difference(_startDate);
+        _startDate = pickedDate;
+        _endDate = _endDate.add(delta);
+      } else {
+        _endDate = pickedDate;
+      }
+      if (_endDate.isBefore(_startDate)) {
+        _endDate = _startDate;
+      }
+    });
+  }
+
+  Future<void> _pickTime({required bool isStart}) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: isStart ? _startTime : _endTime,
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      if (isStart) {
+        _startTime = picked;
+      } else {
+        _endTime = picked;
+      }
+    });
   }
 
   Future<void> _save() async {
@@ -315,16 +395,31 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
 
     setState(() => _isSaving = true);
     final start = _isAllDay
-        ? _eventDate
+        ? _startDate
         : DateTime(
-            _eventDate.year,
-            _eventDate.month,
-            _eventDate.day,
-            _startHour,
+            _startDate.year,
+            _startDate.month,
+            _startDate.day,
+            _startTime.hour,
+            _startTime.minute,
           );
     final end = _isAllDay
-        ? start.add(const Duration(days: 1))
-        : start.add(Duration(hours: _durationHours));
+        ? _endDate.add(const Duration(days: 1))
+        : DateTime(
+            _endDate.year,
+            _endDate.month,
+            _endDate.day,
+            _endTime.hour,
+            _endTime.minute,
+          );
+
+    if (!end.isAfter(start)) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('종료 일시는 시작 일시보다 뒤여야 해요.')));
+      return;
+    }
 
     await widget.onSave(
       EventInput(
@@ -334,6 +429,7 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
         isAllDay: _isAllDay,
         memo: _memoController.text,
         colorValue: _colorValue,
+        ownership: _ownership,
         photoLabels: const [],
         reminderOffsetMinutes: _reminderOffsetMinutes,
         linkedItems: List.unmodifiable(_linkedItems),
@@ -365,52 +461,66 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
   }
 }
 
-class _NumberPickerField extends StatelessWidget {
-  const _NumberPickerField({
+class _DateTimeRow extends StatelessWidget {
+  const _DateTimeRow({
     required this.label,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.suffix,
-    required this.onChanged,
+    required this.date,
+    required this.time,
+    required this.showTime,
+    required this.onPickDate,
+    required this.onPickTime,
   });
 
   final String label;
-  final int value;
-  final int min;
-  final int max;
-  final String suffix;
-  final ValueChanged<int> onChanged;
+  final DateTime date;
+  final TimeOfDay time;
+  final bool showTime;
+  final VoidCallback onPickDate;
+  final VoidCallback onPickTime;
 
   @override
   Widget build(BuildContext context) {
-    return InputDecorator(
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: '$label 줄이기',
-            onPressed: value <= min ? null : () => onChanged(value - 1),
-            icon: const Icon(Icons.remove),
-          ),
-          Expanded(
-            child: Center(
-              child: Text(
-                '$value$suffix',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 44,
+          height: 56,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
           ),
-          IconButton(
-            tooltip: '$label 늘리기',
-            onPressed: value >= max ? null : () => onChanged(value + 1),
-            icon: const Icon(Icons.add),
+        ),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onPickDate,
+            icon: const Icon(Icons.calendar_today_outlined, size: 18),
+            label: Text(dates.formatDateLabel(date)),
+          ),
+        ),
+        if (showTime) ...[
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 104,
+            child: OutlinedButton.icon(
+              onPressed: onPickTime,
+              icon: const Icon(Icons.schedule, size: 18),
+              label: Text(_formatTime(time)),
+            ),
           ),
         ],
-      ),
+      ],
     );
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 }

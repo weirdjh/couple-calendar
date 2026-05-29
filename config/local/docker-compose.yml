@@ -1,0 +1,143 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: config/api/local/Dockerfile
+    working_dir: /workspace/apps/api
+    volumes:
+      - ../..:/workspace
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    ports:
+      - "8088:8088"
+    environment:
+      PORT: "8088"
+      EVENT_REPOSITORY: firestore
+      FIRESTORE_PROJECT_ID: demo-calendar
+      FIRESTORE_EMULATOR_HOST: firebase-emulator:8085
+    depends_on:
+      firebase-emulator:
+        condition: service_healthy
+    command:
+      - go
+      - run
+      - ./cmd/server
+
+  firebase-emulator:
+    build:
+      context: ../..
+      dockerfile: config/firebase/local/Dockerfile
+    command:
+      - sh
+      - -lc
+      - >
+        data_dir="/workspace/config/local/firebase-data";
+        import_arg="";
+        export_arg="";
+        if [ "$${FIREBASE_PERSISTENCE:-true}" = "true" ]; then
+          if [ -f "$$data_dir/firebase-export-metadata.json" ]; then
+            import_arg="--import=$$data_dir";
+          fi;
+          export_arg="--export-on-exit=$$data_dir";
+        fi;
+        firebase emulators:start
+        --only auth,firestore
+        --project demo-calendar
+        --config /workspace/config/firebase/local/firebase.json
+        $$import_arg
+        $$export_arg &
+        firebase_pid=$$!;
+        trap "kill -INT $$firebase_pid; wait $$firebase_pid" TERM INT;
+        wait $$firebase_pid
+    working_dir: /workspace/config/local
+    stop_grace_period: 45s
+    environment:
+      FIREBASE_PERSISTENCE: ${FIREBASE_PERSISTENCE:-true}
+    volumes:
+      - ../..:/workspace
+      - firebase-emulator-cache:/root/.cache/firebase/emulators
+    ports:
+      - "4000:4000"
+      - "8085:8085"
+      - "9099:9099"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4000').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  flutter-web:
+    image: ghcr.io/cirruslabs/flutter:stable
+    working_dir: /workspace
+    environment:
+      PUB_CACHE: /tmp/pub-cache
+    depends_on:
+      firebase-emulator:
+        condition: service_healthy
+    volumes:
+      - ../..:/workspace
+      - flutter-pub-cache:/tmp/pub-cache
+    ports:
+      - "8080:8080"
+    command:
+      - bash
+      - -lc
+      - >
+        flutter pub get &&
+        flutter build web
+        --dart-define=APP_DATA_MODE=api
+        --dart-define=API_BASE_URL=http://127.0.0.1:8088
+        --dart-define=LOCAL_DEMO_COUPLE_ID=demo-couple
+        --dart-define=LOCAL_DEMO_USER_ID=demo-user-1 &&
+        python3 -m http.server 8080
+        --bind 0.0.0.0
+        --directory build/web
+
+  demo-seed:
+    image: node:24-alpine
+    profiles: ["tools"]
+    working_dir: /workspace
+    environment:
+      API_BASE_URL: http://api:8088
+      FIRESTORE_EMULATOR_REST_URL: "http://firebase-emulator:8085/v1/projects/demo-calendar/databases/(default)/documents"
+      LOCAL_DEMO_USER_ID: demo-user-1
+      LOCAL_DEMO_PARTNER_ID: local-partner
+    depends_on:
+      - api
+      - firebase-emulator
+    volumes:
+      - ../..:/workspace
+    command:
+      - node
+      - tool/local_demo_data.mjs
+      - seed
+
+  demo-clean:
+    image: node:24-alpine
+    profiles: ["tools"]
+    working_dir: /workspace
+    environment:
+      API_BASE_URL: http://api:8088
+      FIRESTORE_EMULATOR_REST_URL: "http://firebase-emulator:8085/v1/projects/demo-calendar/databases/(default)/documents"
+      LOCAL_DEMO_USER_ID: demo-user-1
+      LOCAL_DEMO_PARTNER_ID: local-partner
+    depends_on:
+      - api
+      - firebase-emulator
+    volumes:
+      - ../..:/workspace
+    command:
+      - node
+      - tool/local_demo_data.mjs
+      - cleanup
+
+volumes:
+  go-mod-cache:
+  go-build-cache:
+  firebase-emulator-cache:
+  flutter-pub-cache:

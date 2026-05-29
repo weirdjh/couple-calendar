@@ -7,6 +7,7 @@ import '../../features/calendar/presentation/screens/calendar_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/records/presentation/screens/records_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../theme/app_theme.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -21,7 +22,7 @@ final selectedAppTabProvider = NotifierProvider<AppTabController, int>(
 
 class AppTabController extends Notifier<int> {
   @override
-  int build() => 1;
+  int build() => 0;
 
   void selectCalendar() {
     state = 1;
@@ -36,6 +37,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(sessionControllerProvider);
+    if (session.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     if (!session.isSignedIn || !session.hasCouple) {
       return const CoupleOnboardingScreen();
     }
@@ -75,18 +79,24 @@ class _AppShellState extends ConsumerState<AppShell> {
             .map((destination) => destination.screen)
             .toList(),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: (index) {
-          ref.read(selectedAppTabProvider.notifier).selectIndex(index);
-        },
-        destinations: destinations.map((destination) {
-          return NavigationDestination(
-            icon: Icon(destination.icon),
-            selectedIcon: Icon(destination.selectedIcon),
-            label: destination.label,
-          );
-        }).toList(),
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppPalette.paper,
+          border: Border(top: BorderSide(color: AppPalette.line)),
+        ),
+        child: NavigationBar(
+          selectedIndex: selectedIndex,
+          onDestinationSelected: (index) {
+            ref.read(selectedAppTabProvider.notifier).selectIndex(index);
+          },
+          destinations: destinations.map((destination) {
+            return NavigationDestination(
+              icon: Icon(destination.icon),
+              selectedIcon: Icon(destination.selectedIcon),
+              label: destination.label,
+            );
+          }).toList(),
+        ),
       ),
     );
   }

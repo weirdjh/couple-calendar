@@ -3,13 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/time/calendar_date_utils.dart' as dates;
 import '../../../anniversaries/presentation/screens/anniversary_screen.dart';
+import '../../../auth/presentation/controllers/session_controller.dart';
+import '../../../date_records/application/date_record_service.dart';
+import '../../../date_records/presentation/controllers/date_record_controller.dart';
 import '../../../date_records/presentation/screens/date_record_screen.dart';
+import '../../../links/application/linked_content_service.dart';
 import '../../../records/presentation/screens/record_placeholder_screen.dart';
+import '../../../reviews/presentation/screens/review_screen.dart';
+import '../../../todos/application/bucket_completion_service.dart';
 import '../../../todos/domain/models/todo_item.dart';
 import '../../../todos/presentation/controllers/todo_controller.dart';
 import '../../../todos/presentation/screens/todo_screen.dart';
 import '../../domain/models/calendar_event.dart';
 import '../controllers/calendar_controller.dart';
+import '../event_ownership_presentation.dart';
+import '../linked_item_presentation.dart';
 import '../widgets/event_editor_sheet.dart';
 
 class EventDetailScreen extends ConsumerWidget {
@@ -28,56 +36,85 @@ class EventDetailScreen extends ConsumerWidget {
         body: const Center(child: Text('일정을 찾을 수 없어요.')),
       );
     }
+    final currentUser = ref.watch(sessionControllerProvider).currentUser;
+    final dateRecords = ref.watch(dateRecordControllerProvider).records;
+    final linkedDateRecord = dateRecords
+        .where((record) => record.linkedEventId == event.id)
+        .firstOrNull;
+    final displayLinkedItems = [
+      ...event.linkedItems,
+      if (linkedDateRecord != null &&
+          !event.linkedItems.any(
+            (item) =>
+                item.type == LinkedItemType.dateRecord &&
+                dateRecordIdForLinkedItem(item) == linkedDateRecord.id,
+          ))
+        linkedItemForDateRecord(linkedDateRecord),
+    ];
+    final currentUserId = currentUser?.id ?? '';
+    final canEdit = currentUserId.isNotEmpty && event.canEditFor(currentUserId);
+    final hasDateRecordLink = displayLinkedItems.any(
+      (item) => item.type == LinkedItemType.dateRecord,
+    );
+    final canWatch =
+        currentUserId.isNotEmpty && event.isPartnerOwnedFor(currentUserId);
+    final isWatched =
+        currentUserId.isNotEmpty && event.isWatchedBy(currentUserId);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('일정 상세'),
         actions: [
-          IconButton(
-            tooltip: '편집',
-            onPressed: () => _editEvent(context, ref, event),
-            icon: const Icon(Icons.edit_outlined),
-          ),
-          IconButton(
-            tooltip: '삭제',
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('일정을 삭제할까요?'),
-                  content: Text('${event.title} 일정을 삭제해요.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('취소'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('삭제'),
-                    ),
-                  ],
-                ),
-              );
-              if (confirmed != true || !context.mounted) {
-                return;
-              }
-              await ref
+          if (canWatch)
+            IconButton(
+              tooltip: isWatched ? '지켜보기 해제' : '지켜보기',
+              onPressed: () => ref
                   .read(calendarControllerProvider.notifier)
-                  .deleteEvent(event.id);
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
-            },
-            icon: const Icon(Icons.delete_outline),
-          ),
+                  .toggleWatchEvent(event.id),
+              icon: Icon(
+                isWatched
+                    ? Icons.notifications_active_outlined
+                    : Icons.notifications_none_outlined,
+              ),
+            ),
+          if (canEdit) ...[
+            IconButton(
+              tooltip: '편집',
+              onPressed: () => _editEvent(context, ref, event),
+              icon: const Icon(Icons.edit_outlined),
+            ),
+            IconButton(
+              tooltip: '삭제',
+              onPressed: () => _deleteEvent(context, ref, event),
+              icon: const Icon(Icons.delete_outline),
+            ),
+          ],
         ],
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            _Header(event: event),
+            _Header(event: event, currentUserId: currentUserId),
             const SizedBox(height: 18),
+            if (canWatch) ...[
+              _Section(
+                title: '지켜보기',
+                icon: isWatched
+                    ? Icons.notifications_active_outlined
+                    : Icons.notifications_none_outlined,
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(isWatched ? '알림을 받고 있어요.' : '상대 일정 알림 받기'),
+                  subtitle: const Text('상대 일정은 지켜보기한 경우에만 알림을 받아요.'),
+                  value: isWatched,
+                  onChanged: (_) => ref
+                      .read(calendarControllerProvider.notifier)
+                      .toggleWatchEvent(event.id),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             _Section(
               title: '메모',
               icon: Icons.notes_outlined,
@@ -103,40 +140,63 @@ class EventDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _Section(
-              title: '연결된 항목',
+              title: '연결',
               icon: Icons.link,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (event.linkedItems.isEmpty)
-                    const Text('아직 연결된 항목이 없어요.')
+                  if (displayLinkedItems.isEmpty)
+                    const Text('없음')
                   else
-                    ...event.linkedItems.map((item) {
+                    ...displayLinkedItems.map((item) {
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         onTap: () => _openLinkedItem(context, item),
-                        leading: Icon(_linkedItemIcon(item.type)),
+                        leading: Icon(linkedItemTypeIcon(item.type)),
                         title: Text(item.title),
                         subtitle: item.subtitle == null
                             ? null
                             : Text(item.subtitle!),
-                        trailing: IconButton(
-                          tooltip: '연결 해제',
-                          onPressed: () =>
-                              _unlinkItem(context, ref, event, item),
-                          icon: const Icon(Icons.link_off),
-                        ),
+                        trailing: canEdit
+                            ? IconButton(
+                                tooltip: '연결 해제',
+                                onPressed: () =>
+                                    _unlinkItem(context, ref, event, item),
+                                icon: const Icon(Icons.link_off),
+                              )
+                            : null,
                       );
                     }),
                   const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _linkTodoItem(context, ref, event),
-                      icon: const Icon(Icons.add_link),
-                      label: const Text('버킷리스트 연결'),
+                  if (canEdit)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: hasDateRecordLink
+                              ? null
+                              : () => _createDateRecordFromEvent(
+                                  context,
+                                  ref,
+                                  event,
+                                ),
+                          icon: const Icon(Icons.place_outlined),
+                          label: Text(hasDateRecordLink ? '데이트' : '데이트'),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: hasDateRecordLink
+                              ? () => _linkTodoItemToDateRecord(
+                                  context,
+                                  ref,
+                                  event,
+                                )
+                              : null,
+                          icon: const Icon(Icons.add_link),
+                          label: Text(hasDateRecordLink ? '버킷' : '버킷'),
+                        ),
+                      ],
                     ),
-                  ),
                 ],
               ),
             ),
@@ -146,20 +206,55 @@ class EventDetailScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _deleteEvent(
+    BuildContext context,
+    WidgetRef ref,
+    CalendarEvent event,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('일정을 삭제할까요?'),
+        content: Text('${event.title} 일정을 삭제해요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+    await ref.read(calendarControllerProvider.notifier).deleteEvent(event.id);
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   void _openLinkedItem(BuildContext context, LinkedItem item) {
     final screen = switch (item.type) {
-      LinkedItemType.todo => const TodoScreen(),
-      LinkedItemType.dateRecord => const DateRecordScreen(),
+      LinkedItemType.todo => TodoScreen(
+        highlightedItemId: todoItemIdForLinkedItem(item),
+        highlightedCompletionId: todoCompletionIdForLinkedItem(item),
+      ),
+      LinkedItemType.dateRecord => DateRecordDetailScreen(
+        dateRecordIdForLinkedItem(item),
+      ),
       LinkedItemType.conflict => const RecordPlaceholderScreen(
         title: '싸움 기록',
         body: '싸움 기록 상세 화면은 아직 준비 중이에요.',
       ),
-      LinkedItemType.review => const RecordPlaceholderScreen(
-        title: '리뷰',
-        body: '리뷰 상세 화면은 아직 준비 중이에요.',
-      ),
+      LinkedItemType.review => ReviewDetailScreen(item.targetId),
       LinkedItemType.anniversary => const AnniversaryScreen(),
-      LinkedItemType.place => const DateRecordScreen(),
+      LinkedItemType.place => DateRecordDetailScreen(
+        dateRecordIdForLinkedItem(item),
+      ),
     };
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
@@ -169,16 +264,16 @@ class EventDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     CalendarEvent event,
   ) async {
-    final durationHours = event.endAt.difference(event.startAt).inHours;
     await showEventEditorSheet(
       context: context,
       sheetTitle: '일정 편집',
       initialDate: event.startAt,
+      initialEndAt: event.endAt,
       initialTitle: event.title,
       initialMemo: event.memo,
       initialIsAllDay: event.isAllDay,
       initialColorValue: event.colorValue,
-      initialDurationHours: durationHours <= 0 ? 1 : durationHours,
+      initialOwnership: event.ownership,
       initialReminderOffsetMinutes: event.reminders.isEmpty
           ? null
           : event.reminders.first.offsetMinutes,
@@ -189,11 +284,19 @@ class EventDetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _linkTodoItem(
+  Future<void> _linkTodoItemToDateRecord(
     BuildContext context,
     WidgetRef ref,
     CalendarEvent event,
   ) async {
+    final dateRecordId = firstDateRecordIdForEvent(event);
+    if (dateRecordId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('데이트 없음')));
+      return;
+    }
+
     final selection = await showModalBottomSheet<_TodoSelection>(
       context: context,
       isScrollControlled: true,
@@ -204,39 +307,37 @@ class EventDetailScreen extends ConsumerWidget {
       return;
     }
 
-    final completedAt = dates.dateOnly(event.startAt);
-    final completion = ref
-        .read(todoControllerProvider.notifier)
-        .addCompletion(
-          itemId: selection.item.id,
-          completedAt: completedAt,
-          calendarEventId: event.id,
+    final result = await ref
+        .read(bucketCompletionServiceProvider)
+        .completeItemForEvent(
+          item: selection.item,
+          event: event,
+          category: selection.category,
         );
-    if (completion == null) {
+
+    if (result != null && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('연결됨')));
+    }
+  }
+
+  Future<void> _createDateRecordFromEvent(
+    BuildContext context,
+    WidgetRef ref,
+    CalendarEvent event,
+  ) async {
+    final record = await ref
+        .read(dateRecordServiceProvider)
+        .createDateRecordFromEvent(event);
+    if (record == null) {
       return;
     }
-
-    await ref
-        .read(calendarControllerProvider.notifier)
-        .addLinkedItem(
-          eventId: event.id,
-          linkedItem: LinkedItem(
-            type: LinkedItemType.todo,
-            targetId: completion.id,
-            targetPath:
-                '/todos/${selection.item.id}/completions/${completion.id}',
-            title: selection.item.title,
-            subtitle: selection.category.title,
-            date: completedAt,
-            preview: '버킷리스트 달성',
-            createdAt: completion.createdAt,
-          ),
-        );
 
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('버킷리스트를 일정에 연결했어요.')));
+      ).showSnackBar(const SnackBar(content: Text('연결됨')));
     }
   }
 
@@ -249,8 +350,8 @@ class EventDetailScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('연결을 해제할까요?'),
-        content: Text('${item.title} 연결을 이 일정에서 제거해요.'),
+        title: const Text('해제?'),
+        content: Text(item.title),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -268,15 +369,12 @@ class EventDetailScreen extends ConsumerWidget {
     }
 
     await ref
-        .read(calendarControllerProvider.notifier)
-        .removeLinkedItem(eventId: event.id, linkedItem: item);
-    if (item.type == LinkedItemType.todo) {
-      ref.read(todoControllerProvider.notifier).removeCompletion(item.targetId);
-    }
+        .read(linkedContentServiceProvider)
+        .unlinkCalendarEventItem(eventId: event.id, linkedItem: item);
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('연결을 해제했어요.')));
+      ).showSnackBar(const SnackBar(content: Text('해제됨')));
     }
   }
 }
@@ -318,7 +416,7 @@ class _TodoPickerSheet extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
                       child: Text(
-                        category.title,
+                        '${category.emoji} ${category.title}',
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
@@ -345,16 +443,25 @@ class _TodoPickerSheet extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.event});
+  const _Header({required this.event, required this.currentUserId});
 
   final CalendarEvent event;
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
-    final color = Color(event.colorValue);
-    final dateLabel = event.isAllDay
-        ? '${dates.formatDateLabel(event.startAt)} · 하루 종일'
-        : '${dates.formatDateLabel(event.startAt)} ${dates.formatTimeLabel(event.startAt)} - ${dates.formatTimeLabel(event.endAt)}';
+    final color = currentUserId.isEmpty
+        ? Color(event.colorValue)
+        : eventOwnershipColor(event, currentUserId);
+    final ownershipLabel = currentUserId.isEmpty
+        ? '일정'
+        : event.ownershipLabelFor(currentUserId);
+    final kindLabel = event.kind == CalendarEventKind.date ? '데이트' : '일반 일정';
+    final dateLabel = dates.formatEventRangeLabel(
+      startAt: event.startAt,
+      endAt: event.endAt,
+      isAllDay: event.isAllDay,
+    );
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -374,6 +481,21 @@ class _Header extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
+          Chip(
+            avatar: Icon(eventOwnershipIcon(event, currentUserId), size: 18),
+            label: Text(ownershipLabel),
+          ),
+          const SizedBox(height: 6),
+          Chip(
+            avatar: Icon(
+              event.kind == CalendarEventKind.date
+                  ? Icons.place_outlined
+                  : Icons.event_outlined,
+              size: 18,
+            ),
+            label: Text(kindLabel),
+          ),
+          const SizedBox(height: 8),
           Text(
             event.title,
             style: Theme.of(
@@ -449,16 +571,5 @@ String _reminderLabel(int offsetMinutes) {
     60 => '1시간 전',
     1440 => '하루 전',
     _ => '$offsetMinutes분 전',
-  };
-}
-
-IconData _linkedItemIcon(LinkedItemType type) {
-  return switch (type) {
-    LinkedItemType.todo => Icons.check_circle_outline,
-    LinkedItemType.dateRecord => Icons.place_outlined,
-    LinkedItemType.conflict => Icons.favorite_border,
-    LinkedItemType.anniversary => Icons.celebration_outlined,
-    LinkedItemType.review => Icons.star_border,
-    LinkedItemType.place => Icons.map_outlined,
   };
 }

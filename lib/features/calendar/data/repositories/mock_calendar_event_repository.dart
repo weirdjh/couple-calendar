@@ -10,8 +10,9 @@ class MockCalendarEventRepository implements CalendarEventRepository {
   var _nextId = 10;
 
   @override
-  Future<List<CalendarEvent>> watchEvents({
+  Future<List<CalendarEvent>> fetchEvents({
     required String coupleId,
+    required String userId,
     required DateRange visibleRange,
   }) async {
     final events =
@@ -65,7 +66,10 @@ class MockCalendarEventRepository implements CalendarEventRepository {
       endAt: input.endAt,
       isAllDay: input.isAllDay,
       memo: input.memo.trim(),
+      kind: input.kind,
       colorValue: input.colorValue,
+      ownership: input.ownership,
+      ownerUserId: userId,
       photos: photos,
       reminders: reminders,
       linkedItems: input.linkedItems,
@@ -81,6 +85,7 @@ class MockCalendarEventRepository implements CalendarEventRepository {
   Future<void> deleteEvent({
     required String coupleId,
     required String eventId,
+    required String userId,
   }) async {
     final index = _events.indexWhere(
       (event) => event.coupleId == coupleId && event.id == eventId,
@@ -97,6 +102,7 @@ class MockCalendarEventRepository implements CalendarEventRepository {
   @override
   Future<CalendarEvent> updateEvent({
     required String coupleId,
+    required String userId,
     required CalendarEvent event,
   }) async {
     final index = _events.indexWhere(
@@ -128,6 +134,7 @@ List<CalendarEvent> _seedEvents(DateTime today) {
   final userId = 'demo-user-1';
   final dinnerStart = DateTime(today.year, today.month, today.day, 19);
   final weekend = dateOnly(today).add(const Duration(days: 3));
+  final tripStart = dateOnly(today).add(const Duration(days: 7));
   final movieDay = dateOnly(today).subtract(const Duration(days: 2));
 
   return [
@@ -139,6 +146,8 @@ List<CalendarEvent> _seedEvents(DateTime today) {
       endAt: dinnerStart.add(const Duration(hours: 2)),
       memo: '퇴근 후 성수에서 만나기',
       colorValue: 0xFF4D7C8A,
+      ownership: EventOwnership.personal,
+      ownerUserId: userId,
       reminders: [
         Reminder(
           id: 'reminder-event-1',
@@ -156,18 +165,25 @@ List<CalendarEvent> _seedEvents(DateTime today) {
     CalendarEvent(
       id: 'event-2',
       coupleId: coupleId,
-      title: '주말 데이트',
+      title: '하남검단산 데이트',
       startAt: weekend,
       endAt: weekend.add(const Duration(days: 1)),
       isAllDay: true,
-      memo: '가고 싶은 전시 후보 정하기',
+      kind: CalendarEventKind.date,
+      memo: '버킷리스트 등산을 데이트 기록으로 남기기',
       colorValue: 0xFFC67C4E,
+      ownership: EventOwnership.shared,
+      ownerUserId: userId,
       linkedItems: [
         LinkedItem(
-          type: LinkedItemType.todo,
-          targetId: 'todo-1',
-          title: '전시 보러가기',
-          subtitle: '나중에 todo 모듈에서 연결',
+          type: LinkedItemType.dateRecord,
+          targetId: 'date-record-1',
+          targetPath: '/records/dates/date-record-1',
+          title: '하남검단산 데이트',
+          subtitle: '하남검단산',
+          date: weekend,
+          preview: '등산 버킷리스트 달성',
+          emoji: '⛰️',
           createdAt: now,
         ),
       ],
@@ -178,17 +194,39 @@ List<CalendarEvent> _seedEvents(DateTime today) {
     CalendarEvent(
       id: 'event-3',
       coupleId: coupleId,
+      title: '부산 여행',
+      startAt: tripStart,
+      endAt: tripStart.add(const Duration(days: 3)),
+      isAllDay: true,
+      memo: '2박 3일 여행 일정',
+      colorValue: 0xFF7C6A9E,
+      ownership: EventOwnership.shared,
+      ownerUserId: userId,
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+    ),
+    CalendarEvent(
+      id: 'event-4',
+      coupleId: coupleId,
       title: '영화 리뷰',
       startAt: movieDay.add(const Duration(hours: 21)),
       endAt: movieDay.add(const Duration(hours: 23)),
+      kind: CalendarEventKind.date,
       memo: '리뷰 모듈이 생기면 별점과 감상 기록을 여기에 연결',
       colorValue: 0xFF7C6A9E,
+      ownership: EventOwnership.personal,
+      ownerUserId: 'demo-user-2',
       linkedItems: [
         LinkedItem(
-          type: LinkedItemType.review,
-          targetId: 'review-1',
-          title: '영화 리뷰 placeholder',
-          subtitle: '별점 기록 예정',
+          type: LinkedItemType.dateRecord,
+          targetId: 'date-record-2',
+          targetPath: '/records/dates/date-record-2',
+          title: '영화 리뷰',
+          subtitle: '집 근처 영화관',
+          date: movieDay,
+          preview: '영화 리뷰가 포함된 데이트',
+          emoji: '🎬',
           createdAt: now,
         ),
       ],

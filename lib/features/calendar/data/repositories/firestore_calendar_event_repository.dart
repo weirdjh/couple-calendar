@@ -13,8 +13,9 @@ class FirestoreCalendarEventRepository implements CalendarEventRepository {
   final FirebaseFirestore _firestore;
 
   @override
-  Future<List<CalendarEvent>> watchEvents({
+  Future<List<CalendarEvent>> fetchEvents({
     required String coupleId,
+    required String userId,
     required DateRange visibleRange,
   }) async {
     final snapshot = await _eventsCollection(coupleId)
@@ -23,18 +24,15 @@ class FirestoreCalendarEventRepository implements CalendarEventRepository {
           CalendarEventFields.rangeStartAt,
           isLessThan: Timestamp.fromDate(visibleRange.end.toUtc()),
         )
-        .where(
-          CalendarEventFields.rangeEndAt,
-          isGreaterThanOrEqualTo: Timestamp.fromDate(
-            visibleRange.start.toUtc(),
-          ),
-        )
-        .orderBy(CalendarEventFields.rangeStartAt)
         .get();
 
     final events =
         snapshot.docs
             .map((doc) => _CalendarEventMapper.fromDocument(doc))
+            .where(
+              (event) =>
+                  !event.endAt.toUtc().isBefore(visibleRange.start.toUtc()),
+            )
             .toList()
           ..sort(compareCalendarEvents);
     return events;
@@ -58,7 +56,10 @@ class FirestoreCalendarEventRepository implements CalendarEventRepository {
       endAt: input.endAt,
       isAllDay: input.isAllDay,
       memo: input.memo.trim(),
+      kind: input.kind,
       colorValue: input.colorValue,
+      ownership: input.ownership,
+      ownerUserId: userId,
       photos: photos,
       reminders: reminders,
       linkedItems: input.linkedItems,
@@ -75,6 +76,7 @@ class FirestoreCalendarEventRepository implements CalendarEventRepository {
   Future<void> deleteEvent({
     required String coupleId,
     required String eventId,
+    required String userId,
   }) async {
     final now = DateTime.now().toUtc();
     await _eventsCollection(coupleId).doc(eventId).update({
@@ -86,6 +88,7 @@ class FirestoreCalendarEventRepository implements CalendarEventRepository {
   @override
   Future<CalendarEvent> updateEvent({
     required String coupleId,
+    required String userId,
     required CalendarEvent event,
   }) async {
     final updated = event.copyWith(updatedAt: DateTime.now().toUtc());
@@ -146,7 +149,11 @@ class CalendarEventFields {
   static const rangeEndAt = 'rangeEndAt';
   static const isAllDay = 'isAllDay';
   static const memo = 'memo';
+  static const kind = 'kind';
   static const colorValue = 'colorValue';
+  static const ownership = 'ownership';
+  static const ownerUserId = 'ownerUserId';
+  static const watcherUserIds = 'watcherUserIds';
   static const photos = 'photos';
   static const reminders = 'reminders';
   static const linkedItems = 'linkedItems';
@@ -169,7 +176,11 @@ class _CalendarEventMapper {
       endAt: _readDate(data[CalendarEventFields.endAt]),
       isAllDay: data[CalendarEventFields.isAllDay] as bool? ?? false,
       memo: data[CalendarEventFields.memo] as String? ?? '',
+      kind: _readKind(data[CalendarEventFields.kind]),
       colorValue: data[CalendarEventFields.colorValue] as int? ?? 0xFF4D7C8A,
+      ownership: _readOwnership(data[CalendarEventFields.ownership]),
+      ownerUserId: data[CalendarEventFields.ownerUserId] as String? ?? '',
+      watcherUserIds: _readStringList(data[CalendarEventFields.watcherUserIds]),
       photos: _readPhotos(data[CalendarEventFields.photos]),
       reminders: _readReminders(data[CalendarEventFields.reminders]),
       linkedItems: _readLinkedItems(data[CalendarEventFields.linkedItems]),
@@ -192,7 +203,11 @@ class _CalendarEventMapper {
       CalendarEventFields.rangeEndAt: Timestamp.fromDate(event.endAt.toUtc()),
       CalendarEventFields.isAllDay: event.isAllDay,
       CalendarEventFields.memo: event.memo,
+      CalendarEventFields.kind: event.kind.name,
       CalendarEventFields.colorValue: event.colorValue,
+      CalendarEventFields.ownership: event.ownership.name,
+      CalendarEventFields.ownerUserId: event.effectiveOwnerUserId,
+      CalendarEventFields.watcherUserIds: event.watcherUserIds,
       CalendarEventFields.photos: event.photos.map(_photoToMap).toList(),
       CalendarEventFields.reminders: event.reminders
           .map(_reminderToMap)
@@ -228,6 +243,27 @@ class _CalendarEventMapper {
       return value;
     }
     return null;
+  }
+
+  static EventOwnership _readOwnership(Object? value) {
+    return EventOwnership.values.firstWhere(
+      (ownership) => ownership.name == value,
+      orElse: () => EventOwnership.personal,
+    );
+  }
+
+  static CalendarEventKind _readKind(Object? value) {
+    return CalendarEventKind.values.firstWhere(
+      (kind) => kind.name == value,
+      orElse: () => CalendarEventKind.schedule,
+    );
+  }
+
+  static List<String> _readStringList(Object? value) {
+    if (value is! List) {
+      return const [];
+    }
+    return value.whereType<String>().toList();
   }
 
   static Map<String, dynamic> _photoToMap(EventPhoto photo) {
@@ -294,6 +330,7 @@ class _CalendarEventMapper {
       'date': item.date == null ? null : Timestamp.fromDate(item.date!.toUtc()),
       'thumbnailUrl': item.thumbnailUrl,
       'preview': item.preview,
+      'emoji': item.emoji,
       'createdAt': Timestamp.fromDate(item.createdAt.toUtc()),
     };
   }
@@ -312,6 +349,7 @@ class _CalendarEventMapper {
         date: _readNullableDate(data['date']),
         thumbnailUrl: data['thumbnailUrl'] as String?,
         preview: data['preview'] as String?,
+        emoji: data['emoji'] as String?,
         createdAt: _readDate(data['createdAt']),
       );
     }).toList();

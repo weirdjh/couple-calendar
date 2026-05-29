@@ -4,7 +4,9 @@ class Anniversary {
     required this.coupleId,
     required this.title,
     required this.baseDate,
-    required this.kind,
+    required this.repeatRule,
+    this.calendarType = AnniversaryCalendarType.solar,
+    this.isLeapMonth = false,
     required this.createdBy,
     required this.createdAt,
     required this.updatedAt,
@@ -14,13 +16,39 @@ class Anniversary {
   final String coupleId;
   final String title;
   final DateTime baseDate;
-  final AnniversaryKind kind;
+  final AnniversaryRepeatRule repeatRule;
+  final AnniversaryCalendarType calendarType;
+  final bool isLeapMonth;
   final String createdBy;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  Anniversary copyWith({
+    String? title,
+    DateTime? baseDate,
+    AnniversaryRepeatRule? repeatRule,
+    AnniversaryCalendarType? calendarType,
+    bool? isLeapMonth,
+    DateTime? updatedAt,
+  }) {
+    return Anniversary(
+      id: id,
+      coupleId: coupleId,
+      title: title ?? this.title,
+      baseDate: baseDate ?? this.baseDate,
+      repeatRule: repeatRule ?? this.repeatRule,
+      calendarType: calendarType ?? this.calendarType,
+      isLeapMonth: isLeapMonth ?? this.isLeapMonth,
+      createdBy: createdBy,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
 
-enum AnniversaryKind { firstMet, relationshipStart, custom }
+enum AnniversaryCalendarType { solar, lunar }
+
+enum AnniversaryRepeatRule { every100Days, yearly, every100DaysAndYearly }
 
 class AnniversaryOccurrence {
   const AnniversaryOccurrence({
