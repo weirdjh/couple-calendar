@@ -1,0 +1,7 @@
+# Go local artifacts
+*.test
+coverage.out
+tmp/
+
+# Local machine noise
+.DS_Store

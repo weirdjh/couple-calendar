@@ -7,6 +7,7 @@ This project keeps two test layers.
 Run these after normal Flutter changes:
 
 ```bash
+cd apps/frontend
 flutter analyze
 flutter test
 ```
@@ -17,7 +18,7 @@ It should stay fast and deterministic.
 Run these after normal Go API changes:
 
 ```bash
-docker compose -f config/local/docker-compose.yml run --rm api go test ./...
+docker compose -f infra/local/docker-compose.yml run --rm api go test ./...
 ```
 
 Cross-domain use cases in `apps/api/internal/application/links` must have Go
@@ -36,8 +37,9 @@ bash tool/run_firestore_emulator_tests.sh
 The script starts Firebase Auth and Firestore emulators in Docker, then runs:
 
 ```bash
-flutter test
-docker compose ... exec firebase-emulator node /workspace/tool/firebase_emulator_smoke_test.mjs
+(cd apps/frontend && flutter test)
+docker compose -f infra/local/docker-compose.yml exec -T firebase-emulator \
+  node /workspace/tool/firebase_emulator_smoke_test.mjs
 ```
 
 The Flutter test suite verifies repository contracts against mock repositories
@@ -55,14 +57,15 @@ regressions. Direct FlutterFire repository integration tests should be added
 later with a stable device/integration-test runner; browser unit tests currently
 hang during Firebase setup in this local environment.
 
-Local Firebase config lives under `config/firebase/local`, and the local app
-compose file lives at `config/local/docker-compose.yml`. Keep root-level
-Firebase files out of the repo; production config should later live under
-`config/firebase/production`.
+Local Firebase config lives under `apps/api/config/firebase/local`, and the
+shared local app compose file lives at `infra/local/docker-compose.yml`. Keep
+root-level Firebase files out of the repo; production config should later live
+under `apps/api/config/firebase/production`.
 
-Local app runs export Firebase Emulator state to `config/local/firebase-data`
-on shutdown and import it on the next startup. That directory is ignored by git.
-Use a full `docker compose -f config/local/docker-compose.yml down` when you
+Local app runs export Firebase Emulator state to the Docker volume
+`firebase-emulator-data` on shutdown and import it on the next startup. This
+keeps local emulator state out of the project tree.
+Use a full `docker compose -f infra/local/docker-compose.yml down` when you
 want the export to happen cleanly.
 
 The integration test script disables emulator persistence with
@@ -85,7 +88,7 @@ rules and add negative permission tests.
 Run this after API contract, repository, or cross-domain use case changes:
 
 ```bash
-docker compose -f config/local/docker-compose.yml up -d --build api
+docker compose -f infra/local/docker-compose.yml up -d --build api
 node tool/api_smoke_test.mjs
 node tool/api_two_user_qa_smoke_test.mjs
 ```
@@ -103,7 +106,7 @@ The smoke test covers the current backend-owned happy path:
 
 The script uses the Go API for behavior and the Firestore emulator REST API for
 best-effort cleanup of throwaway documents. It assumes local ports from
-`config/local/docker-compose.yml`.
+`infra/local/docker-compose.yml`.
 
 `tool/api_two_user_qa_smoke_test.mjs` adds the couple-specific permission path:
 

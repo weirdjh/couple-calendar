@@ -2,7 +2,7 @@ services:
   api:
     build:
       context: ../..
-      dockerfile: config/api/local/Dockerfile
+      dockerfile: apps/api/config/local/api/Dockerfile
     working_dir: /workspace/apps/api
     volumes:
       - ../..:/workspace
@@ -26,12 +26,12 @@ services:
   firebase-emulator:
     build:
       context: ../..
-      dockerfile: config/firebase/local/Dockerfile
+      dockerfile: apps/api/config/firebase/local/Dockerfile
     command:
       - sh
       - -lc
       - >
-        data_dir="/workspace/config/local/firebase-data";
+        data_dir="/firebase-data";
         import_arg="";
         export_arg="";
         if [ "$${FIREBASE_PERSISTENCE:-true}" = "true" ]; then
@@ -43,18 +43,19 @@ services:
         firebase emulators:start
         --only auth,firestore
         --project demo-calendar
-        --config /workspace/config/firebase/local/firebase.json
+        --config /workspace/apps/api/config/firebase/local/firebase.json
         $$import_arg
         $$export_arg &
         firebase_pid=$$!;
         trap "kill -INT $$firebase_pid; wait $$firebase_pid" TERM INT;
         wait $$firebase_pid
-    working_dir: /workspace/config/local
+    working_dir: /tmp/firebase-emulator
     stop_grace_period: 45s
     environment:
       FIREBASE_PERSISTENCE: ${FIREBASE_PERSISTENCE:-true}
     volumes:
       - ../..:/workspace
+      - firebase-emulator-data:/firebase-data
       - firebase-emulator-cache:/root/.cache/firebase/emulators
     ports:
       - "4000:4000"
@@ -73,7 +74,7 @@ services:
 
   flutter-web:
     image: ghcr.io/cirruslabs/flutter:stable
-    working_dir: /workspace
+    working_dir: /workspace/apps/frontend
     environment:
       PUB_CACHE: /tmp/pub-cache
     depends_on:
@@ -140,4 +141,5 @@ volumes:
   go-mod-cache:
   go-build-cache:
   firebase-emulator-cache:
+  firebase-emulator-data:
   flutter-pub-cache:

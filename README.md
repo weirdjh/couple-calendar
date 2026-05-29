@@ -29,9 +29,23 @@ The first version focuses on a flexible calendar core:
 
 ## Development
 
-After dependencies are configured:
+The repository is a small monorepo:
+
+- `apps/frontend`: Flutter app for iOS, web, and later Android
+- `apps/api`: Go API server
+- `infra`: shared local runtime wiring, such as Docker Compose
+- `docs`: product, architecture, engineering, and testing docs
+- `tool`: local QA and seed scripts
+
+App-owned config lives with the app:
+
+- `apps/api/config`: API Docker and Firebase emulator config
+- `apps/frontend`: Flutter platform config and app metadata
+
+After frontend dependencies are configured:
 
 ```sh
+cd apps/frontend
 flutter pub get
 flutter analyze
 flutter test
@@ -40,6 +54,7 @@ flutter test
 Run the app:
 
 ```sh
+cd apps/frontend
 flutter run
 ```
 
@@ -52,20 +67,20 @@ Authentication is deferred; see `docs/architecture/auth-plan.md`.
 Run the local API, Firebase emulator, and Flutter web app:
 
 ```sh
-docker compose -f config/local/docker-compose.yml up -d --build
+docker compose -f infra/local/docker-compose.yml up -d --build
 ```
 
 Seed local demo data for the web app:
 
 ```sh
-docker compose -f config/local/docker-compose.yml run --rm demo-seed
+docker compose -f infra/local/docker-compose.yml run --rm demo-seed
 ```
 
 Clean local demo data before shutting down:
 
 ```sh
-docker compose -f config/local/docker-compose.yml run --rm demo-clean
-docker compose -f config/local/docker-compose.yml down
+docker compose -f infra/local/docker-compose.yml run --rm demo-clean
+docker compose -f infra/local/docker-compose.yml down
 ```
 
 The local web app uses `LOCAL_DEMO_USER_ID=demo-user-1`, so the seed script and

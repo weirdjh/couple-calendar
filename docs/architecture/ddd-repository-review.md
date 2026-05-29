@@ -215,8 +215,8 @@ Responsibilities:
 
 Current status:
 
-- Implemented as `lib/features/todos/application/bucket_completion_service.dart`.
-- Has a service test in `test/bucket_completion_service_test.dart`.
+- Implemented as `apps/frontend/lib/features/todos/application/bucket_completion_service.dart`.
+- Has a service test in `apps/frontend/test/bucket_completion_service_test.dart`.
 - Writes through repositories and refreshes controllers afterward.
 
 ### `DateRecordService`
@@ -232,7 +232,7 @@ Responsibilities:
 
 Current status:
 
-- Implemented as `lib/features/date_records/application/date_record_service.dart`.
+- Implemented as `apps/frontend/lib/features/date_records/application/date_record_service.dart`.
 - Handles creating a date record from an event and ensuring an event has a date
   record.
 - Writes through repositories and refreshes controllers afterward.

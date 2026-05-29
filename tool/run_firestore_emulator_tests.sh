@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-compose_file="config/local/docker-compose.yml"
+compose_file="infra/local/docker-compose.yml"
 service_name="firebase-emulator"
 
 FIREBASE_PERSISTENCE=false docker compose -f "$compose_file" up -d --build "$service_name"
@@ -26,7 +26,7 @@ if ! grep -q "All emulators ready" <<< "$logs"; then
   exit 1
 fi
 
-flutter test
+(cd apps/frontend && flutter test)
 
 docker compose -f "$compose_file" exec -T "$service_name" \
   node /workspace/tool/firebase_emulator_smoke_test.mjs

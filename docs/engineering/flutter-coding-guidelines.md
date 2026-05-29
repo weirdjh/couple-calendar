@@ -7,7 +7,7 @@ These instructions are for future coding agents working on this Flutter project.
 - Use Flutter.
 - Use Riverpod for state management.
 - Use Firebase for auth, database, storage, and notifications.
-- Prefer feature-first organization under `lib/features`.
+- Prefer feature-first organization under `apps/frontend/lib/features`.
 - Keep implementation small and working before adding abstractions.
 - Do not introduce Bloc, Provider, GetX, Redux, MobX, or another state library unless explicitly requested.
 - Use Material 3 for the first UI system.
@@ -245,7 +245,8 @@ Add focused tests around:
 - Repository behavior with fakes.
 - Provider/controller behavior for create/edit/delete flows.
 
-For UI changes, at least run `flutter analyze` and relevant tests before finishing.
+For UI changes, at least run `cd apps/frontend && flutter analyze` and relevant
+tests before finishing.
 
 Test with fake repositories first. Avoid requiring a real Firebase project for basic unit tests.
 

@@ -37,24 +37,39 @@ The app should be feature-first, with shared infrastructure separated from produ
 Recommended structure:
 
 ```text
-lib/
-  app/
-    app.dart
-    theme.dart
-    router.dart
-  core/
-    errors/
-    firebase/
-    routing/
-    time/
-    widgets/
-  features/
-    auth/
-    couple/
-    calendar/
-    photos/
-    reminders/
-    linked_items/
+apps/
+  frontend/
+    lib/
+      app/
+        app.dart
+        theme/
+      core/
+        api/
+        firebase/
+        time/
+      features/
+        auth/
+        couple/
+        calendar/
+        photos/
+        todos/
+        date_records/
+        reviews/
+  api/
+    config/
+      firebase/
+      local/
+    cmd/
+    internal/
+      adapters/
+      application/
+      domain/
+      bootstrap/
+      platform/
+infra/
+  local/
+docs/
+tool/
 ```
 
 Each feature can contain:

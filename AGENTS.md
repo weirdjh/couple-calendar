@@ -20,6 +20,8 @@ its priority order for the task.
 Project decisions:
 
 - Flutter app for iOS and web first, Android later.
+- Flutter frontend lives under `apps/frontend`.
+- Go backend lives under `apps/api`.
 - Riverpod for state management.
 - Go API server for business logic.
 - Firebase for authentication, Firestore, Storage, and notifications behind
@@ -68,7 +70,8 @@ Working order:
 
 Before finishing code work:
 
-- Run `flutter analyze` when possible.
-- Run relevant tests when possible.
+- For Flutter changes, run `cd apps/frontend && flutter analyze` when possible.
+- For Flutter changes, run relevant tests from `apps/frontend` when possible.
+- For Go API changes, run tests from `apps/api` when possible.
 - Mention any commands that could not be run.
 - Mention any product ambiguity that remains.

@@ -327,9 +327,9 @@ The refactor is done when:
 - Existing tests pass:
 
 ```sh
-docker compose -f config/local/docker-compose.yml run --rm api go test ./...
-flutter analyze
-flutter test
+docker compose -f infra/local/docker-compose.yml run --rm api go test ./...
+(cd apps/frontend && flutter analyze)
+(cd apps/frontend && flutter test)
 ```
 
 Run the existing local smoke checks after rebuilding the API container.
