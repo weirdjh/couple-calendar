@@ -1,77 +1,63 @@
 # Instructions For Coding Agents
 
-Read these docs before making code changes:
+This file is the entrypoint for new coding sessions. Keep it short and stable.
+Detailed product, architecture, and testing rules live under `docs/`.
 
-- `docs/README.md`
-- `docs/product/requirements.md`
-- `docs/product/user-scenarios.md`
-- `docs/product/calendar-spec.md`
-- `docs/product/product-spec.md`
-- `docs/architecture/architecture.md`
-- `docs/product/navigation-and-screens.md`
-- `docs/engineering/flutter-coding-guidelines.md`
-- `docs/architecture/api-server-migration.md`
-- `docs/architecture/auth-plan.md`
-- `docs/testing/testing.md`
+## Read First
 
-If you only read one file after this one, read `docs/README.md`, then follow
-its priority order for the task.
+Before making code changes, read `docs/README.md` and follow its priority order
+for the task. Then read only the task-relevant specs.
 
-Project decisions:
+Common starting points:
 
-- Flutter app for iOS and web first, Android later.
-- Flutter frontend lives under `apps/frontend`.
-- Go backend lives under `apps/api`.
-- Riverpod for state management.
-- Go API server for business logic.
-- Firebase for authentication, Firestore, Storage, and notifications behind
-  repositories and, over time, behind the API server.
-- Authentication is deferred; when it starts, follow
-  `docs/architecture/auth-plan.md`.
-- The calendar is the product center.
-- Future modules, such as todos, date records, conflict notes, anniversaries, and reviews, should link to calendar events through a generic linked-item model.
-- User journeys and cross-screen behavior are defined in `docs/product/user-scenarios.md`; update it before implementing ambiguous flows.
-- Calendar events should not own photos directly. Photos belong to linked records, and Calendar shows only linked thumbnails/previews.
-- Calendar events support explicit start/end date-time ranges, including
-  multi-day and overnight schedules.
-- Couple members should have stable profile colors that distinguish who created
-  each event.
-- Calendar supports 내 일정, 상대 일정, and 우리 일정.
-- Users can edit/delete 내 일정 and 우리 일정, but not 상대 일정.
-- Users receive reminders for 내 일정/우리 일정 and can watch 상대 일정.
-- MVP supports one active couple per user.
-- MVP calendar events are visible to both couple members.
-- MVP should implement the calendar core before implementing full todo, map, conflict, anniversary, or review modules.
+- Product behavior: `docs/product/user-scenarios.md`
+- Calendar rules: `docs/product/calendar-spec.md`
+- Screen ownership: `docs/product/navigation-and-screens.md`
+- Data and architecture: `docs/architecture/architecture.md`
+- API migration and Go layers: `docs/architecture/api-server-migration.md`
+- Auth work: `docs/architecture/auth-plan.md`
+- Flutter conventions: `docs/engineering/flutter-coding-guidelines.md`
+- Go conventions: `docs/engineering/go-api-package-guidelines.md`
+- Verification: `docs/testing/testing.md`
 
-Coding style:
+## Repository Shape
+
+- Frontend: `apps/frontend`
+- Backend API: `apps/api`
+- Backend/Firebase config: `apps/api/config`
+- Shared local runtime wiring: `infra/local`
+- Docs: `docs`
+- Local scripts: `tool`
+
+## Working Principles
 
 - Prefer immutable models and pure functions where they fit naturally.
-- Keep side effects out of widgets.
-- Hide Firebase behind repositories/services.
+- Keep side effects at repository, service, controller, or adapter boundaries.
+- Keep widgets declarative and free of direct persistence/API calls.
+- Prefer the Go API for business rules that affect multiple domains.
 - Keep changes small, focused, and consistent with existing code.
 - Do not introduce a new state management package unless explicitly asked.
-- Do not add feature-specific fields such as todo details, conflict body, or review rating directly to `CalendarEvent`; use linked items.
-- Do not call Firebase directly from widgets.
-- Do not add new direct Flutter-to-Firebase behavior when the same behavior is
-  a backend business rule. Prefer adding it to the Go API server and exposing it
-  through a Flutter repository.
 - Do not add packages casually.
+- Do not duplicate detailed product or architecture specs in this file; link to the owning doc instead.
+- Update the relevant doc when behavior, architecture, commands, or workflows
+  change.
 
-Working order:
+## Working Order
 
 1. Inspect existing code.
-2. Identify the smallest feature boundary to change.
-3. Update or create models first.
-4. Add repository/service behavior.
-5. Add Riverpod providers or controllers.
+2. Read the task-relevant docs.
+3. Identify the smallest feature boundary to change.
+4. Update or create models and service/repository behavior.
+5. Add providers, controllers, handlers, or adapters.
 6. Add UI.
 7. Add focused tests when practical.
 8. Run verification commands.
 
-Before finishing code work:
+## Before Finishing
 
 - For Flutter changes, run `cd apps/frontend && flutter analyze` when possible.
 - For Flutter changes, run relevant tests from `apps/frontend` when possible.
 - For Go API changes, run tests from `apps/api` when possible.
+- For local stack changes, validate `infra/local/docker-compose.yml`.
 - Mention any commands that could not be run.
 - Mention any product ambiguity that remains.
