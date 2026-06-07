@@ -83,6 +83,8 @@ services:
     volumes:
       - ../..:/workspace
       - flutter-pub-cache:/tmp/pub-cache
+      - flutter-tool-state:/workspace/apps/frontend/.dart_tool
+      - flutter-build:/workspace/apps/frontend/build
     ports:
       - "8080:8080"
     command:
@@ -143,3 +145,5 @@ volumes:
   firebase-emulator-cache:
   firebase-emulator-data:
   flutter-pub-cache:
+  flutter-tool-state:
+  flutter-build:

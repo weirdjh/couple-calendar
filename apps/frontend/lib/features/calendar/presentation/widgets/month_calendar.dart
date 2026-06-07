@@ -78,7 +78,7 @@ class MonthCalendar extends StatelessWidget {
                   crossAxisCount: 7,
                   mainAxisSpacing: 0,
                   crossAxisSpacing: 0,
-                  childAspectRatio: 1.05,
+                  childAspectRatio: 0.92,
                 ),
                 itemCount: days.length,
                 itemBuilder: (context, index) {
@@ -149,32 +149,31 @@ class _DayCell extends StatelessWidget {
     final singleDayEvents = events.where((event) => !_isMultiDayEvent(event));
     final hasDateEvent = events.any(_isDateEvent);
     final background = isSelected
-        ? scheme.primary
+        ? scheme.primaryContainer
         : isToday
         ? scheme.primaryContainer
         : scheme.surface;
-    final foreground = isSelected
-        ? scheme.onPrimary
-        : _dayAccentColor(
-            context,
-            isRedDay: dayStyle.isRedDay,
-            isSaturday: dayStyle.isSaturday,
-            isMuted: !isFocusedMonth,
-          );
+    final foreground = _dayAccentColor(
+      context,
+      isRedDay: dayStyle.isRedDay,
+      isSaturday: dayStyle.isSaturday,
+      isMuted: !isFocusedMonth,
+    );
 
     return Material(
       color: background,
       clipBehavior: Clip.hardEdge,
-      shape: hasDateEvent
-          ? Border.all(color: const Color(0xFFE77AA2), width: 2)
-          : Border(
-              right: BorderSide(
-                color: scheme.outlineVariant.withValues(alpha: 0.45),
-              ),
-              bottom: BorderSide(
-                color: scheme.outlineVariant.withValues(alpha: 0.45),
-              ),
-            ),
+      shape: Border(
+        top: isSelected
+            ? BorderSide(color: scheme.primary, width: 2)
+            : hasDateEvent
+            ? const BorderSide(color: Color(0xFFE77AA2), width: 2)
+            : BorderSide.none,
+        right: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.45)),
+        bottom: BorderSide(
+          color: scheme.outlineVariant.withValues(alpha: 0.45),
+        ),
+      ),
       child: InkWell(
         onTap: onTap,
         child: Padding(
@@ -220,9 +219,7 @@ class _DayCell extends StatelessWidget {
                     day,
                   );
                   final ends = dates.isSameDate(_inclusiveEndDate(event), day);
-                  final color = isSelected
-                      ? scheme.onPrimary
-                      : currentUserId.isEmpty
+                  final color = currentUserId.isEmpty
                       ? Color(event.colorValue)
                       : eventOwnershipColor(event, currentUserId);
                   return Container(
@@ -250,9 +247,7 @@ class _DayCell extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
-                                  color: isSelected
-                                      ? scheme.onPrimary
-                                      : foreground,
+                                  color: foreground,
                                   fontSize: 8,
                                   height: 1,
                                   fontWeight: FontWeight.w700,
@@ -264,9 +259,7 @@ class _DayCell extends StatelessWidget {
                                 Icon(
                                   Icons.celebration,
                                   size: 12,
-                                  color: isSelected
-                                      ? scheme.onPrimary
-                                      : scheme.tertiary,
+                                  color: scheme.tertiary,
                                 ),
                               if (anniversaries.isNotEmpty &&
                                   singleDayEvents.isNotEmpty)
@@ -283,7 +276,7 @@ class _DayCell extends StatelessWidget {
                                       height: 6,
                                       decoration: BoxDecoration(
                                         color: isSelected
-                                            ? scheme.onPrimary
+                                            ? scheme.primary
                                             : currentUserId.isEmpty
                                             ? Color(event.colorValue)
                                             : eventOwnershipColor(

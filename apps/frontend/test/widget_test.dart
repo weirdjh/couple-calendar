@@ -31,7 +31,7 @@ void main() {
 
     await tester.tap(find.text('저녁 약속').first);
     await tester.pumpAndSettle();
-    expect(find.text('일정 추가'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, '일정'), findsOneWidget);
 
     await tester.tap(find.byTooltip('닫기'));
     await tester.pumpAndSettle();

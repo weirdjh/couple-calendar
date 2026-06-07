@@ -63,7 +63,6 @@ class EventDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('일정 상세'),
         actions: [
           if (canWatch)
             IconButton(
@@ -96,7 +95,7 @@ class EventDetailScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(20),
           children: [
             _Header(event: event, currentUserId: currentUserId),
-            const SizedBox(height: 18),
+            const SizedBox(height: 8),
             if (canWatch) ...[
               _Section(
                 title: '지켜보기',
@@ -115,39 +114,39 @@ class EventDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
             ],
-            _Section(
-              title: '메모',
-              icon: Icons.notes_outlined,
-              child: Text(
-                event.memo.isEmpty ? '메모가 없어요.' : event.memo,
-                style: Theme.of(context).textTheme.bodyLarge,
+            if (event.memo.isNotEmpty) ...[
+              _Section(
+                title: '메모',
+                icon: Icons.notes_outlined,
+                child: Text(
+                  event.memo,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            _Section(
-              title: '알림',
-              icon: Icons.notifications_outlined,
-              child: event.reminders.isEmpty
-                  ? const Text('설정된 알림이 없어요.')
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: event.reminders.map((reminder) {
-                        return Text(
-                          '${_reminderLabel(reminder.offsetMinutes)} · ${dates.formatDateLabel(reminder.remindAt)} ${dates.formatTimeLabel(reminder.remindAt)}',
-                        );
-                      }).toList(),
-                    ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 4),
+            ],
+            if (event.reminders.isNotEmpty) ...[
+              _Section(
+                title: '알림',
+                icon: Icons.notifications_outlined,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: event.reminders.map((reminder) {
+                    return Text(
+                      '${_reminderLabel(reminder.offsetMinutes)} · ${dates.formatDateLabel(reminder.remindAt)} ${dates.formatTimeLabel(reminder.remindAt)}',
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
             _Section(
               title: '연결',
               icon: Icons.link,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (displayLinkedItems.isEmpty)
-                    const Text('없음')
-                  else
+                  if (displayLinkedItems.isNotEmpty)
                     ...displayLinkedItems.map((item) {
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
@@ -167,34 +166,26 @@ class EventDetailScreen extends ConsumerWidget {
                             : null,
                       );
                     }),
-                  const SizedBox(height: 8),
+                  if (displayLinkedItems.isNotEmpty) const SizedBox(height: 4),
                   if (canEdit)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        OutlinedButton.icon(
-                          onPressed: hasDateRecordLink
-                              ? null
-                              : () => _createDateRecordFromEvent(
-                                  context,
-                                  ref,
-                                  event,
-                                ),
-                          icon: const Icon(Icons.place_outlined),
-                          label: Text(hasDateRecordLink ? '데이트' : '데이트'),
-                        ),
-                        const SizedBox(height: 8),
-                        OutlinedButton.icon(
-                          onPressed: hasDateRecordLink
-                              ? () => _linkTodoItemToDateRecord(
-                                  context,
-                                  ref,
-                                  event,
-                                )
-                              : null,
-                          icon: const Icon(Icons.add_link),
-                          label: Text(hasDateRecordLink ? '버킷' : '버킷'),
-                        ),
+                        if (!hasDateRecordLink)
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                _createDateRecordFromEvent(context, ref, event),
+                            icon: const Icon(Icons.favorite_border),
+                            label: const Text('데이트'),
+                          ),
+                        if (hasDateRecordLink)
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                _linkTodoItemToDateRecord(context, ref, event),
+                            icon: const Icon(Icons.check_circle_outline),
+                            label: const Text('버킷'),
+                          ),
                       ],
                     ),
                 ],
@@ -456,46 +447,51 @@ class _Header extends StatelessWidget {
     final ownershipLabel = currentUserId.isEmpty
         ? '일정'
         : event.ownershipLabelFor(currentUserId);
-    final kindLabel = event.kind == CalendarEventKind.date ? '데이트' : '일반 일정';
+    final kindLabel = event.kind == CalendarEventKind.date ? '데이트' : '일정';
     final dateLabel = dates.formatEventRangeLabel(
       startAt: event.startAt,
       endAt: event.endAt,
       isAllDay: event.isAllDay,
     );
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 4, 2, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 4,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(8),
-            ),
+          Row(
+            children: [
+              Icon(
+                eventOwnershipIcon(event, currentUserId),
+                size: 18,
+                color: color,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                ownershipLabel,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(
+                event.kind == CalendarEventKind.date
+                    ? Icons.favorite_border
+                    : Icons.event_outlined,
+                size: 17,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                kindLabel,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
-          Chip(
-            avatar: Icon(eventOwnershipIcon(event, currentUserId), size: 18),
-            label: Text(ownershipLabel),
-          ),
-          const SizedBox(height: 6),
-          Chip(
-            avatar: Icon(
-              event.kind == CalendarEventKind.date
-                  ? Icons.place_outlined
-                  : Icons.event_outlined,
-              size: 18,
-            ),
-            label: Text(kindLabel),
-          ),
-          const SizedBox(height: 8),
           Text(
             event.title,
             style: Theme.of(
@@ -506,13 +502,6 @@ class _Header extends StatelessWidget {
           Text(
             dateLabel,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '작성자: ${event.createdBy}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
@@ -535,13 +524,8 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -559,6 +543,8 @@ class _Section extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           child,
+          const SizedBox(height: 14),
+          Divider(color: Theme.of(context).colorScheme.outlineVariant),
         ],
       ),
     );

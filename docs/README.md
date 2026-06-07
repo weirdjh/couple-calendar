@@ -71,6 +71,11 @@ step-by-step flows here; put those in `docs/product/user-scenarios.md`.
 Screen responsibilities and routing direction. Use it to decide which screen
 owns a workflow and which detail/edit routes should exist.
 
+`docs/product/ux-improvement-plan.md`
+
+Cross-screen UX audit and improvement-pass tracker. Use it to choose and record
+the next UI/UX pass without duplicating feature behavior.
+
 `docs/product/requirements.md`
 
 Original and current requirements. Use it for product background, MVP

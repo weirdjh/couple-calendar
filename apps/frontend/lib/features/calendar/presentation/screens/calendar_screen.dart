@@ -433,8 +433,8 @@ class _SelectedDayPanel extends StatelessWidget {
               Expanded(
                 child: FilledButton.icon(
                   onPressed: onAddDateRecord,
-                  icon: const Icon(Icons.place_outlined),
-                  label: const Text('데이트 기록 추가'),
+                  icon: const Icon(Icons.favorite_border),
+                  label: const Text('데이트'),
                 ),
               ),
               const SizedBox(width: 8),
@@ -442,7 +442,7 @@ class _SelectedDayPanel extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onAddEvent,
                   icon: const Icon(Icons.add),
-                  label: Text(events.isEmpty ? '일정 추가' : '일정 추가'),
+                  label: const Text('일정'),
                 ),
               ),
             ],
@@ -637,11 +637,16 @@ class _EventTile extends StatelessWidget {
       isAllDay: event.isAllDay,
     );
 
-    return Card(
-      elevation: 0,
-      color: color.withValues(alpha: 0.10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+        ),
+      ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => EventDetailScreen(eventId: event.id),
@@ -662,17 +667,22 @@ class _EventTile extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         subtitle: Text(
-          [
-            ownershipLabel,
-            timeLabel,
-            if (event.memo.isNotEmpty) event.memo,
-          ].join(' · '),
+          event.memo.isEmpty ? timeLabel : '$timeLabel\n${event.memo}',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
         trailing: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 4,
           children: [
+            Tooltip(
+              message: ownershipLabel,
+              child: Icon(
+                eventOwnershipIcon(event, currentUserId),
+                size: 18,
+                color: color,
+              ),
+            ),
             if (event.isPartnerOwnedFor(currentUserId) &&
                 event.isWatchedBy(currentUserId))
               const Icon(Icons.notifications_active_outlined, size: 18),
