@@ -53,6 +53,17 @@ Common starting points:
 7. Add focused tests when practical.
 8. Run verification commands.
 
+## Efficient Exploration
+
+- Search with `rg` before reading files, then read only the relevant ranges.
+- Prefer focused tests first; run broader suites after the focused checks pass.
+- Do not run Flutter commands in parallel because they share a startup lock.
+- Keep command output bounded. On failure, inspect the concise error and a
+  targeted log range instead of repeatedly printing full logs.
+- Prefer `git diff --stat` or path-scoped diffs over large repository-wide
+  status and diff output.
+- For UI work, batch implementation before rebuilding and checking the browser.
+
 ## Before Finishing
 
 - For Flutter changes, run `cd apps/frontend && flutter analyze` when possible.

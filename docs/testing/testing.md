@@ -15,6 +15,11 @@ flutter test
 The default test suite uses mock repositories and pure application/domain code.
 It should stay fast and deterministic.
 
+Run Flutter commands sequentially because Flutter uses a shared startup lock.
+Start with the smallest relevant test file, then run the broader suite when the
+focused test passes. If a command fails with very large output, inspect the
+first actionable error before rerunning or collecting more logs.
+
 Run these after normal Go API changes:
 
 ```bash
