@@ -8,20 +8,22 @@ import (
 	appdaterecords "couple-calendar-api/internal/application/daterecords"
 	appreviews "couple-calendar-api/internal/application/reviews"
 	apptodos "couple-calendar-api/internal/application/todos"
+	"couple-calendar-api/internal/application/transaction"
 	domainlinks "couple-calendar-api/internal/domain/links"
 	"couple-calendar-api/internal/platform/clock"
 	"couple-calendar-api/internal/platform/idgen"
 )
 
 type Service struct {
-	events      appcalendar.EventRepository
-	records     appdaterecords.Repository
-	reviews     appreviews.Repository
-	todos       apptodos.Repository
-	clock       clock.Clock
-	ids         idgen.Generator
-	eventEditor eventUpdater
-	authorizer  authz.CoupleAuthorizer
+	events       appcalendar.EventRepository
+	records      appdaterecords.Repository
+	reviews      appreviews.Repository
+	todos        apptodos.Repository
+	clock        clock.Clock
+	ids          idgen.Generator
+	eventEditor  eventUpdater
+	authorizer   authz.CoupleAuthorizer
+	transactions transaction.Runner
 }
 
 type eventUpdater interface {
@@ -36,16 +38,21 @@ func NewService(
 	eventEditor eventUpdater,
 	authorizer authz.CoupleAuthorizer,
 	clock clock.Clock,
+	transactions transaction.Runner,
 ) Service {
+	if transactions == nil {
+		transactions = transaction.Immediate{}
+	}
 	return Service{
-		events:      events,
-		records:     records,
-		reviews:     reviews,
-		todos:       todos,
-		eventEditor: eventEditor,
-		authorizer:  authorizer,
-		clock:       clock,
-		ids:         idgen.Crypto{},
+		events:       events,
+		records:      records,
+		reviews:      reviews,
+		todos:        todos,
+		eventEditor:  eventEditor,
+		authorizer:   authorizer,
+		clock:        clock,
+		ids:          idgen.Crypto{},
+		transactions: transactions,
 	}
 }
 

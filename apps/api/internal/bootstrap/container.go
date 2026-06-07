@@ -13,6 +13,7 @@ import (
 	firestoredaterecords "couple-calendar-api/internal/adapters/persistence/firestore/daterecords"
 	firestorereviews "couple-calendar-api/internal/adapters/persistence/firestore/reviews"
 	firestoretodos "couple-calendar-api/internal/adapters/persistence/firestore/todos"
+	firestoretransaction "couple-calendar-api/internal/adapters/persistence/firestore/transaction"
 	memoryanniversaries "couple-calendar-api/internal/adapters/persistence/memory/anniversaries"
 	memorycalendar "couple-calendar-api/internal/adapters/persistence/memory/calendar"
 	memorycouples "couple-calendar-api/internal/adapters/persistence/memory/couples"
@@ -27,6 +28,7 @@ import (
 	"couple-calendar-api/internal/application/links"
 	"couple-calendar-api/internal/application/reviews"
 	"couple-calendar-api/internal/application/todos"
+	"couple-calendar-api/internal/application/transaction"
 	"couple-calendar-api/internal/platform/clock"
 )
 
@@ -50,6 +52,7 @@ func NewContainer(ctx context.Context, config Config) Container {
 		eventService,
 		authorizer,
 		clock.System{},
+		repositories.transactions,
 	)
 
 	return Container{
@@ -78,6 +81,7 @@ type repositories struct {
 	reviews       reviews.Repository
 	anniversaries anniversaries.Repository
 	couples       couples.Repository
+	transactions  transaction.Runner
 }
 
 func newRepositories(ctx context.Context, config Config) (repositories, func()) {
@@ -90,6 +94,7 @@ func newRepositories(ctx context.Context, config Config) (repositories, func()) 
 			reviews:       memoryreviews.NewRepository(),
 			anniversaries: memoryanniversaries.NewRepository(),
 			couples:       memorycouples.NewRepository(),
+			transactions:  transaction.Immediate{},
 		}, func() {}
 	}
 
@@ -105,6 +110,7 @@ func newRepositories(ctx context.Context, config Config) (repositories, func()) 
 			reviews:       firestorereviews.NewRepository(client),
 			anniversaries: firestoreanniversaries.NewRepository(client),
 			couples:       firestorecouples.NewRepository(client),
+			transactions:  firestoretransaction.NewRunner(client),
 		}, func() {
 			if err := client.Close(); err != nil {
 				log.Printf("close firestore client: %v", err)

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	firestoretransaction "couple-calendar-api/internal/adapters/persistence/firestore/transaction"
 	"couple-calendar-api/internal/application/todos"
 	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
@@ -33,32 +34,32 @@ func (r Repository) Fetch(ctx context.Context, coupleID string) (todos.Snapshot,
 }
 
 func (r Repository) CreateCategory(ctx context.Context, category todos.Category) (todos.Category, error) {
-	_, err := r.categories(category.CoupleID).Doc(category.ID).Set(ctx, category)
+	err := firestoretransaction.Set(ctx, r.categories(category.CoupleID).Doc(category.ID), category)
 	return category, err
 }
 
 func (r Repository) UpdateCategory(ctx context.Context, category todos.Category) (todos.Category, error) {
-	_, err := r.categories(category.CoupleID).Doc(category.ID).Set(ctx, category)
+	err := firestoretransaction.Set(ctx, r.categories(category.CoupleID).Doc(category.ID), category)
 	return category, err
 }
 
 func (r Repository) CreateItem(ctx context.Context, item todos.Item) (todos.Item, error) {
-	_, err := r.items(item.CoupleID).Doc(item.ID).Set(ctx, item)
+	err := firestoretransaction.Set(ctx, r.items(item.CoupleID).Doc(item.ID), item)
 	return item, err
 }
 
 func (r Repository) UpdateItem(ctx context.Context, item todos.Item) (todos.Item, error) {
-	_, err := r.items(item.CoupleID).Doc(item.ID).Set(ctx, item)
+	err := firestoretransaction.Set(ctx, r.items(item.CoupleID).Doc(item.ID), item)
 	return item, err
 }
 
 func (r Repository) CreateCompletion(ctx context.Context, completion todos.Completion) (todos.Completion, error) {
-	_, err := r.completions(completion.CoupleID).Doc(completion.ID).Set(ctx, completion)
+	err := firestoretransaction.Set(ctx, r.completions(completion.CoupleID).Doc(completion.ID), completion)
 	return completion, err
 }
 
 func (r Repository) DeleteCompletion(ctx context.Context, coupleID string, completionID string, deletedAt time.Time) error {
-	_, err := r.completions(coupleID).Doc(completionID).Update(ctx, []firestore.Update{{Path: "DeletedAt", Value: deletedAt.UTC()}})
+	err := firestoretransaction.Update(ctx, r.completions(coupleID).Doc(completionID), []firestore.Update{{Path: "DeletedAt", Value: deletedAt.UTC()}})
 	if status.Code(err) == codes.NotFound {
 		return todos.ErrTodoNotFound
 	}

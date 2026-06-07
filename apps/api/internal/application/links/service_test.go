@@ -16,6 +16,7 @@ import (
 	"couple-calendar-api/internal/application/links"
 	"couple-calendar-api/internal/application/reviews"
 	"couple-calendar-api/internal/application/todos"
+	"couple-calendar-api/internal/application/transaction"
 )
 
 type fixedClock struct {
@@ -24,6 +25,14 @@ type fixedClock struct {
 
 func (c fixedClock) Now() time.Time {
 	return c.now
+}
+
+type failingTransactionRunner struct {
+	err error
+}
+
+func (r failingTransactionRunner) Run(context.Context, func(context.Context) error) error {
+	return r.err
 }
 
 type fixture struct {
@@ -63,7 +72,7 @@ func newFixture() fixture {
 		eventService:   eventService,
 		reviewService:  reviews.NewService(reviewsRepo, authorizer, clock),
 		todoService:    todos.NewService(todosRepo, authorizer, clock),
-		linkService:    links.NewService(events, records, reviewsRepo, todosRepo, eventService, authorizer, clock),
+		linkService:    links.NewService(events, records, reviewsRepo, todosRepo, eventService, authorizer, clock, transaction.Immediate{}),
 		dateRecordServ: daterecords.NewService(records, authorizer, clock),
 	}
 }
@@ -139,6 +148,46 @@ func TestDeleteDateRecordEverywhereCleansLinkedDomains(t *testing.T) {
 	}
 	if len(storedEvent.LinkedItems) != 0 {
 		t.Fatalf("event linked item count = %d, want 0", len(storedEvent.LinkedItems))
+	}
+}
+
+func TestDeleteDateRecordEverywhereDoesNotWriteWhenTransactionCannotStart(t *testing.T) {
+	f := newFixture()
+	event := createEvent(t, f)
+	ensured, err := f.linkService.EnsureDateRecordForEvent(f.ctx, f.coupleID, f.userID, event.ID)
+	if err != nil {
+		t.Fatalf("EnsureDateRecordForEvent() error = %v", err)
+	}
+	review := createReview(t, f)
+	if _, err := f.linkService.LinkReviewToDateRecord(f.ctx, f.coupleID, f.userID, review.ID, ensured.RecordID); err != nil {
+		t.Fatalf("LinkReviewToDateRecord() error = %v", err)
+	}
+
+	transactionErr := errors.New("transaction unavailable")
+	f.linkService = links.NewService(
+		f.events,
+		f.records,
+		f.reviews,
+		f.todos,
+		f.eventService,
+		authz.AllowAllAuthorizer{},
+		fixedClock{now: f.now},
+		failingTransactionRunner{err: transactionErr},
+	)
+
+	err = f.linkService.DeleteDateRecordEverywhere(f.ctx, f.coupleID, f.userID, ensured.RecordID)
+	if !errors.Is(err, transactionErr) {
+		t.Fatalf("DeleteDateRecordEverywhere() error = %v, want %v", err, transactionErr)
+	}
+	if _, err := f.records.Get(f.ctx, f.coupleID, ensured.RecordID); err != nil {
+		t.Fatalf("record Get() after failed transaction error = %v", err)
+	}
+	storedReview, err := f.reviews.Get(f.ctx, f.coupleID, review.ID)
+	if err != nil {
+		t.Fatalf("review Get() after failed transaction error = %v", err)
+	}
+	if storedReview.DateRecordID == nil || *storedReview.DateRecordID != ensured.RecordID {
+		t.Fatalf("Review.DateRecordID = %v, want %s", storedReview.DateRecordID, ensured.RecordID)
 	}
 }
 

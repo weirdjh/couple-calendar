@@ -181,6 +181,11 @@ POST   /v1/couples/{coupleID}/links/calendar-events/{eventID}/linked-items/remov
 Keep single-domain CRUD in its own application package. Put only multi-domain
 orchestration in `application/links`.
 
+Cross-domain writes must run through the application transaction runner.
+Firestore mode backs this runner with an atomic write batch. Memory mode uses an
+immediate runner for fast service tests. The first protected flow is date-record
+deletion cleanup; extend the same boundary to the remaining link/unlink flows.
+
 The API server supports two repository modes:
 
 - `EVENT_REPOSITORY=memory`

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	firestoretransaction "couple-calendar-api/internal/adapters/persistence/firestore/transaction"
 	"couple-calendar-api/internal/application/calendar"
 	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
@@ -48,7 +49,7 @@ func (r CalendarEventRepository) List(ctx context.Context, coupleID string, visi
 }
 
 func (r CalendarEventRepository) Create(ctx context.Context, event calendar.Event) (calendar.Event, error) {
-	_, err := r.events(event.CoupleID).Doc(event.ID).Set(ctx, eventToDocument(event))
+	err := firestoretransaction.Set(ctx, r.events(event.CoupleID).Doc(event.ID), eventToDocument(event))
 	if err != nil {
 		return calendar.Event{}, err
 	}
@@ -74,7 +75,7 @@ func (r CalendarEventRepository) Get(ctx context.Context, coupleID string, event
 }
 
 func (r CalendarEventRepository) Update(ctx context.Context, event calendar.Event) (calendar.Event, error) {
-	_, err := r.events(event.CoupleID).Doc(event.ID).Set(ctx, eventToDocument(event))
+	err := firestoretransaction.Set(ctx, r.events(event.CoupleID).Doc(event.ID), eventToDocument(event))
 	if err != nil {
 		return calendar.Event{}, err
 	}
@@ -82,7 +83,7 @@ func (r CalendarEventRepository) Update(ctx context.Context, event calendar.Even
 }
 
 func (r CalendarEventRepository) Delete(ctx context.Context, coupleID string, eventID string, deletedAt time.Time) error {
-	_, err := r.events(coupleID).Doc(eventID).Update(ctx, []firestore.Update{
+	err := firestoretransaction.Update(ctx, r.events(coupleID).Doc(eventID), []firestore.Update{
 		{Path: "deletedAt", Value: deletedAt.UTC()},
 		{Path: "updatedAt", Value: deletedAt.UTC()},
 	})

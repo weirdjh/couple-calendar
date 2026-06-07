@@ -3,9 +3,11 @@ package links
 import (
 	"context"
 	"strings"
+	"time"
 
 	appcalendar "couple-calendar-api/internal/application/calendar"
 	appdaterecords "couple-calendar-api/internal/application/daterecords"
+	appreviews "couple-calendar-api/internal/application/reviews"
 )
 
 func (s Service) EnsureDateRecordForEvent(ctx context.Context, coupleID, userID, eventID string) (DateRecordResult, error) {
@@ -144,50 +146,109 @@ func (s Service) DeleteDateRecordEverywhere(ctx context.Context, coupleID, userI
 	if err != nil {
 		return err
 	}
-	if record.LinkedEventID != nil {
-		event, err := s.events.Get(ctx, coupleID, *record.LinkedEventID)
-		if err == nil {
-			links := removeLink(event.LinkedItems, "dateRecord", record.ID)
-			if err := s.replaceEventLinks(ctx, coupleID, userID, event, links, appcalendar.EventKindSchedule); err != nil {
-				return err
-			}
-		}
-	}
+
+	now := s.clock.Now()
+	completionIDs := map[string]struct{}{}
+	reviewIDs := map[string]struct{}{}
 	for _, item := range record.LinkedItems {
 		switch item.Type {
 		case "review":
-			review, err := s.reviews.Get(ctx, coupleID, item.TargetID)
-			if err != nil {
-				return err
-			}
-			if review.DateRecordID != nil && *review.DateRecordID == recordID {
-				review.DateRecordID = nil
-				review.UpdatedAt = s.clock.Now()
-				if _, err := s.reviews.Update(ctx, review); err != nil {
-					return err
-				}
-			}
+			reviewIDs[item.TargetID] = struct{}{}
 		case "todo":
-			if err := s.RemoveTodoCompletionEverywhere(ctx, coupleID, userID, item.TargetID); err != nil {
-				return err
-			}
+			completionIDs[item.TargetID] = struct{}{}
 		}
 	}
+
+	reviewUpdates := map[string]appreviews.Review{}
 	reviews, err := s.reviews.List(ctx, coupleID)
 	if err != nil {
 		return err
 	}
 	for _, review := range reviews {
-		if review.DateRecordID == nil || *review.DateRecordID != recordID {
+		_, linkedByItem := reviewIDs[review.ID]
+		linkedByRecord := review.DateRecordID != nil && *review.DateRecordID == recordID
+		if !linkedByItem && !linkedByRecord {
 			continue
 		}
 		review.DateRecordID = nil
-		review.UpdatedAt = s.clock.Now()
-		if _, err := s.reviews.Update(ctx, review); err != nil {
+		review.UpdatedAt = now
+		reviewUpdates[review.ID] = review
+	}
+
+	recordUpdates := map[string]appdaterecords.DateRecord{}
+	eventUpdates := map[string]appcalendar.Event{}
+	if len(completionIDs) > 0 {
+		records, err := s.records.List(ctx, coupleID)
+		if err != nil {
 			return err
 		}
+		for _, otherRecord := range records {
+			if otherRecord.ID == recordID {
+				continue
+			}
+			next := removeTargets(otherRecord.LinkedItems, "todo", completionIDs)
+			if len(next) == len(otherRecord.LinkedItems) {
+				continue
+			}
+			otherRecord.LinkedItems = next
+			otherRecord.UpdatedAt = now
+			recordUpdates[otherRecord.ID] = otherRecord
+		}
+
+		events, err := s.events.List(
+			ctx,
+			coupleID,
+			time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC),
+			time.Date(2200, 1, 1, 0, 0, 0, 0, time.UTC),
+		)
+		if err != nil {
+			return err
+		}
+		for _, event := range events {
+			next := removeTargets(event.LinkedItems, "todo", completionIDs)
+			if len(next) == len(event.LinkedItems) {
+				continue
+			}
+			event.LinkedItems = next
+			eventUpdates[event.ID] = event
+		}
 	}
-	return s.records.Delete(ctx, coupleID, recordID, s.clock.Now())
+
+	if record.LinkedEventID != nil {
+		event, err := s.events.Get(ctx, coupleID, *record.LinkedEventID)
+		if err == nil {
+			if pending, ok := eventUpdates[event.ID]; ok {
+				event = pending
+			}
+			event.LinkedItems = removeLink(event.LinkedItems, "dateRecord", record.ID)
+			event.Kind = appcalendar.EventKindSchedule
+			eventUpdates[event.ID] = event
+		}
+	}
+
+	return s.transactions.Run(ctx, func(txCtx context.Context) error {
+		for _, review := range reviewUpdates {
+			if _, err := s.reviews.Update(txCtx, review); err != nil {
+				return err
+			}
+		}
+		for _, otherRecord := range recordUpdates {
+			if _, err := s.records.Update(txCtx, otherRecord); err != nil {
+				return err
+			}
+		}
+		for _, event := range eventUpdates {
+			if err := s.replaceEventLinks(txCtx, coupleID, userID, event, event.LinkedItems, event.Kind); err != nil {
+				return err
+			}
+		}
+		for completionID := range completionIDs {
+			if err := s.todos.DeleteCompletion(txCtx, coupleID, completionID, now); err != nil {
+				return err
+			}
+		}
+		return s.records.Delete(txCtx, coupleID, recordID, now)
+	})
 }
 
 func (s Service) createRecordFromEvent(ctx context.Context, coupleID, userID string, event appcalendar.Event, linkedItems []appcalendar.LinkedItem) (appdaterecords.DateRecord, error) {

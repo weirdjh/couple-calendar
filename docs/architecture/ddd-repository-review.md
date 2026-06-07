@@ -1,6 +1,6 @@
 # DDD and Repository Review
 
-Last updated: 2026-05-17
+Last updated: 2026-06-07
 
 This document is the handoff guide for continuing repository and service-layer
 work in a fresh session.
@@ -11,11 +11,11 @@ The app is moving in the right direction, but it is not fully DDD-shaped yet.
 The domain models are mostly Flutter/Firebase-free, and all current persistent
 domains now have repository ports with mock implementations.
 
-The biggest remaining gap is repository-backed transaction semantics. The first
-application-service layer now exists for date-record linking and bucket
-completion, but those services still call controllers internally. That is
-acceptable for the prototype, but must be tightened before Firestore becomes the
-real source of truth.
+The biggest remaining gap is repository-backed transaction semantics. Cross-domain
+linking and cleanup now live in the Go API application layer, but several use
+cases still perform repository writes sequentially. These flows must use an
+application transaction boundary before Firestore becomes the production source
+of truth.
 
 ## Repository Coverage
 
@@ -47,21 +47,21 @@ Implemented repository ports:
   - mock placeholder implementation exists
   - Firebase Storage implementation is pending
 
-Still presentation-level or incomplete:
+Still incomplete:
 
-- Auth/session still has only mock repository behavior.
-- Couple creation/join still has only mock repository behavior.
+- Production authentication/session behavior is deferred.
+- Couple invite UX, expiration, and production security rules are incomplete.
 - Notification/reminder delivery has no repository/service implementation yet.
+- Photo upload still has only a placeholder repository.
 
 ## Findings
 
 ### P1: Cross-domain cleanup is not transaction-safe
 
-`LinkedContentService`, `DateRecordService`, and `BucketCompletionService`
-now perform writes through repositories and refresh controllers afterward.
-This is closer to the target architecture, but still does not guarantee
-consistency once Firestore is attached because multi-document writes are not yet
-batched or transactional.
+Cross-domain link and cleanup services now live in the Go API under
+`apps/api/internal/application/links`. They perform writes through repository
+ports, but several multi-document flows still do not guarantee consistency
+because writes are sequential.
 
 Risk:
 
@@ -72,7 +72,8 @@ Risk:
 
 Required work:
 
-- Use Firestore batch writes or transactions for multi-document changes.
+- Use an application-level transaction runner backed by Firestore batch writes
+  or transactions for multi-document changes.
 - Add repository queries such as `findDateRecordsByLinkedItem` and
   `findEventsByLinkedItem`.
 
@@ -338,11 +339,15 @@ state.records.add(record);
 
 Recommended next session order:
 
-1. Add `FirebaseAuthRepository` and `FirestoreCoupleRepository`.
-2. Add repository contract tests for Todo, DateRecord, Review.
-3. Add Firestore batch/transaction support for cross-domain service writes.
+1. Add an application transaction boundary and Firestore batch support for
+   cross-domain service writes, starting with date-record deletion cleanup.
+2. Extend the same transaction boundary to review linking/unlinking and bucket
+   completion creation/removal.
+3. Add repository queries for linked-content cleanup instead of loading entire
+   collections.
 4. Add real photo picking/upload using `PhotoRepository`.
-5. Add Firebase Auth/Couple production flow tests after real auth is connected.
+5. Add notification/reminder delivery.
+6. Add production auth and couple invite tests when real auth is connected.
 
 Definition of done for the repository migration:
 

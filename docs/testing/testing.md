@@ -25,6 +25,10 @@ Cross-domain use cases in `apps/api/internal/application/links` must have Go
 service tests. These tests should use memory repositories and should verify the
 state of every affected domain after the use case runs.
 
+Cross-domain write tests must also verify the transaction boundary. Firestore
+mode uses an atomic write batch; API smoke tests against the emulator verify
+that the batch-backed cleanup path works with real persistence adapters.
+
 ## Firebase Emulator Integration Tests
 
 Run these when Firestore repository behavior, Firebase rules, or backend-shaped

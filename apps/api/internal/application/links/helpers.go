@@ -95,6 +95,18 @@ func removeLink(items []domainlinks.LinkedItem, linkType, targetID string) []dom
 	return result
 }
 
+func removeTargets(items []domainlinks.LinkedItem, linkType string, targetIDs map[string]struct{}) []domainlinks.LinkedItem {
+	result := make([]domainlinks.LinkedItem, 0, len(items))
+	for _, item := range items {
+		_, remove := targetIDs[item.TargetID]
+		if item.Type == linkType && remove {
+			continue
+		}
+		result = append(result, item)
+	}
+	return result
+}
+
 func containsLink(items []domainlinks.LinkedItem, linkType, targetID string) bool {
 	for _, item := range items {
 		if item.Type == linkType && item.TargetID == targetID {

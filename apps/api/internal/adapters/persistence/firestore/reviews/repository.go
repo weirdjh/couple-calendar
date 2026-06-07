@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	firestoretransaction "couple-calendar-api/internal/adapters/persistence/firestore/transaction"
 	"couple-calendar-api/internal/application/reviews"
 	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
@@ -43,7 +44,7 @@ func (r Repository) List(ctx context.Context, coupleID string) ([]reviews.Review
 	return result, nil
 }
 func (r Repository) Create(ctx context.Context, v reviews.Review) (reviews.Review, error) {
-	_, err := r.collection(v.CoupleID).Doc(v.ID).Set(ctx, v)
+	err := firestoretransaction.Set(ctx, r.collection(v.CoupleID).Doc(v.ID), v)
 	return v, err
 }
 func (r Repository) Get(ctx context.Context, coupleID, reviewID string) (reviews.Review, error) {
@@ -68,11 +69,11 @@ func (r Repository) Get(ctx context.Context, coupleID, reviewID string) (reviews
 	return v, nil
 }
 func (r Repository) Update(ctx context.Context, v reviews.Review) (reviews.Review, error) {
-	_, err := r.collection(v.CoupleID).Doc(v.ID).Set(ctx, v)
+	err := firestoretransaction.Set(ctx, r.collection(v.CoupleID).Doc(v.ID), v)
 	return v, err
 }
 func (r Repository) Delete(ctx context.Context, coupleID, reviewID string, deletedAt time.Time) error {
-	_, err := r.collection(coupleID).Doc(reviewID).Update(ctx, []firestore.Update{{Path: "DeletedAt", Value: deletedAt.UTC()}, {Path: "UpdatedAt", Value: deletedAt.UTC()}})
+	err := firestoretransaction.Update(ctx, r.collection(coupleID).Doc(reviewID), []firestore.Update{{Path: "DeletedAt", Value: deletedAt.UTC()}, {Path: "UpdatedAt", Value: deletedAt.UTC()}})
 	return err
 }
 func (r Repository) collection(coupleID string) *firestore.CollectionRef {
