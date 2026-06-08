@@ -89,7 +89,7 @@ class _CalendarEventApiMapper {
       isAllDay: json['isAllDay'] as bool? ?? false,
       memo: json['memo'] as String? ?? '',
       kind: _readKind(json['kind']),
-      colorValue: json['colorValue'] as int? ?? 0xFF4D7C8A,
+      colorValue: json['colorValue'] as int? ?? 0xFF4169E1,
       ownership: _readOwnership(json['ownership']),
       ownerUserId: json['ownerUserId'] as String? ?? '',
       watcherUserIds: _readStringList(json['watcherUserIds']),

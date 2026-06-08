@@ -722,7 +722,7 @@ List<_HomePinnedItem> _homePinnedItems({
           subtitle:
               '${dates.formatDateLabel(occurrence.date)} · ${occurrence.label}',
           icon: Icons.celebration_outlined,
-          color: AppPalette.amber,
+          color: AppPalette.violet,
         ),
       );
 

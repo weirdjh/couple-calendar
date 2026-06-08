@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../domain/models/calendar_event.dart';
 
-const currentUserColorValue = 0xFF4D7C8A;
-const partnerUserColorValue = 0xFFC67C4E;
-const sharedEventColorValue = 0xFF7C6A9E;
+const currentUserColorValue = 0xFF4169E1;
+const partnerUserColorValue = 0xFF7B879D;
+const sharedEventColorValue = 0xFF7C6EE6;
 
 Color eventOwnershipColor(CalendarEvent event, String currentUserId) {
   return Color(eventOwnershipColorValue(event, currentUserId));

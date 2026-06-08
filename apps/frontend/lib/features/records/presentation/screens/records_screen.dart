@@ -30,7 +30,7 @@ class RecordsScreen extends ConsumerWidget {
         eyebrow: _anniversaryEyebrow(nextAnniversary),
         summary: nextAnniversary?.title ?? '소중한 날을 기록해요',
         icon: Icons.celebration_outlined,
-        color: AppPalette.amber,
+        color: AppPalette.violet,
         screen: const AnniversaryScreen(),
       ),
       _RecordModule(
@@ -56,7 +56,7 @@ class RecordsScreen extends ConsumerWidget {
         eyebrow: '${reviewState.reviews.length}개의 리뷰',
         summary: _reviewSummary(reviewState.reviews),
         icon: Icons.star_border,
-        color: AppPalette.rose,
+        color: AppPalette.sky,
         screen: const ReviewScreen(),
       ),
     ];

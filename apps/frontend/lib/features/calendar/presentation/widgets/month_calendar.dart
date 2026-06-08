@@ -167,7 +167,7 @@ class _DayCell extends StatelessWidget {
         top: isSelected
             ? BorderSide(color: scheme.primary, width: 2)
             : hasDateEvent
-            ? const BorderSide(color: Color(0xFFE77AA2), width: 2)
+            ? const BorderSide(color: Color(0xFFC79AA3), width: 2)
             : BorderSide.none,
         right: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.45)),
         bottom: BorderSide(

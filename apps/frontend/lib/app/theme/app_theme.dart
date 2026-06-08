@@ -3,18 +3,19 @@ import 'package:flutter/material.dart';
 class AppPalette {
   const AppPalette._();
 
-  static const ivory = Color(0xFFFFFFFF);
+  static const ivory = Color(0xFFF8FAFC);
   static const paper = Color(0xFFFFFFFF);
-  static const shell = Color(0xFFF7F7F7);
-  static const ink = Color(0xFF111111);
-  static const mutedInk = Color(0xFF737373);
-  static const teal = Color(0xFF111111);
-  static const deepTeal = Color(0xFF000000);
-  static const rose = Color(0xFFE1306C);
-  static const softRose = Color(0xFFFFE6EF);
-  static const sage = Color(0xFF3E8E5B);
-  static const amber = Color(0xFFF77737);
-  static const line = Color(0xFFDBDBDB);
+  static const shell = Color(0xFFF1F5F9);
+  static const ink = Color(0xFF263247);
+  static const mutedInk = Color(0xFF64748B);
+  static const teal = Color(0xFF4169E1);
+  static const deepTeal = Color(0xFF304C9A);
+  static const rose = Color(0xFFE85D75);
+  static const softRose = Color(0xFFFBE9ED);
+  static const sage = Color(0xFF16A085);
+  static const violet = Color(0xFF7C6EE6);
+  static const sky = Color(0xFF3C8DCC);
+  static const line = Color(0xFFD8E0EA);
 }
 
 class AppTheme {
@@ -25,16 +26,16 @@ class AppTheme {
       brightness: Brightness.light,
       primary: AppPalette.teal,
       onPrimary: Colors.white,
-      primaryContainer: Color(0xFFF2F2F2),
+      primaryContainer: Color(0xFFE9EEFF),
       onPrimaryContainer: AppPalette.deepTeal,
-      secondary: AppPalette.rose,
+      secondary: AppPalette.violet,
       onSecondary: Colors.white,
-      secondaryContainer: AppPalette.softRose,
-      onSecondaryContainer: Color(0xFF8A153F),
-      tertiary: AppPalette.amber,
+      secondaryContainer: Color(0xFFEFEDFF),
+      onSecondaryContainer: Color(0xFF4B4666),
+      tertiary: AppPalette.sage,
       onTertiary: Colors.white,
-      tertiaryContainer: Color(0xFFFFE9DE),
-      onTertiaryContainer: Color(0xFF8A360A),
+      tertiaryContainer: Color(0xFFE3F6F1),
+      onTertiaryContainer: Color(0xFF315C56),
       error: Color(0xFFB3261E),
       onError: Colors.white,
       errorContainer: Color(0xFFFFDAD6),
@@ -43,11 +44,11 @@ class AppTheme {
       onSurface: AppPalette.ink,
       surfaceContainerHighest: AppPalette.shell,
       onSurfaceVariant: AppPalette.mutedInk,
-      outline: Color(0xFFB8B8B8),
+      outline: Color(0xFFAAB7C7),
       outlineVariant: AppPalette.line,
       shadow: Color(0x14000000),
       scrim: Colors.black,
-      inverseSurface: Color(0xFF111111),
+      inverseSurface: AppPalette.deepTeal,
       onInverseSurface: Color(0xFFFFFFFF),
       inversePrimary: Color(0xFFFFFFFF),
     );
@@ -95,7 +96,7 @@ class AppTheme {
       ),
       chipTheme: base.chipTheme.copyWith(
         backgroundColor: AppPalette.shell,
-        selectedColor: AppPalette.softRose,
+        selectedColor: Color(0xFFEDEBF4),
         side: const BorderSide(color: AppPalette.line),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         labelStyle: const TextStyle(fontWeight: FontWeight.w700),
@@ -126,7 +127,7 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppPalette.ink,
+          backgroundColor: AppPalette.teal,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: const TextStyle(fontWeight: FontWeight.w800),
@@ -134,7 +135,7 @@ class AppTheme {
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         elevation: 0,
-        backgroundColor: AppPalette.rose,
+        backgroundColor: AppPalette.teal,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -159,7 +160,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppPalette.ink, width: 1.5),
+          borderSide: const BorderSide(color: AppPalette.teal, width: 1.5),
         ),
         labelStyle: const TextStyle(color: AppPalette.mutedInk),
         prefixIconColor: AppPalette.mutedInk,
@@ -180,7 +181,7 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
-            color: selected ? AppPalette.ink : AppPalette.mutedInk,
+            color: selected ? AppPalette.teal : AppPalette.mutedInk,
             fontSize: 12,
             fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
           );
@@ -188,7 +189,7 @@ class AppTheme {
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? AppPalette.ink : AppPalette.mutedInk,
+            color: selected ? AppPalette.teal : AppPalette.mutedInk,
             size: selected ? 25 : 23,
           );
         }),
@@ -202,7 +203,7 @@ class AppTheme {
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: const Color(0xFF36302B),
+        backgroundColor: AppPalette.deepTeal,
         contentTextStyle: const TextStyle(color: Colors.white),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

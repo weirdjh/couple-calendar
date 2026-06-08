@@ -200,7 +200,7 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
       initialTitle: item.title,
       initialMemo: '버킷리스트를 달성했어요.',
       initialIsAllDay: true,
-      initialColorValue: 0xFF4D7C8A,
+      initialColorValue: 0xFF4169E1,
       initialOwnership: EventOwnership.shared,
       previewLinkedItems: [
         previewLinkedItemForTodoItem(

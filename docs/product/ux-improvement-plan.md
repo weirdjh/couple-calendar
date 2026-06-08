@@ -12,6 +12,8 @@ feature behavior still belongs in the owning product specs.
 - Keep creation and editing separate from browsing screens.
 - Review complete user journeys, not isolated screens.
 - Verify mobile-sized web first, then wider web layouts.
+- Prefer restrained slate, blue, and lilac tones for structure and actions.
+- Reserve warm coral accents for emotional meaning such as dates and hearts.
 
 ## Completed Passes
 
@@ -44,6 +46,24 @@ feature behavior still belongs in the owning product specs.
 - Show useful counts, the next anniversary, latest date record, and average
   review rating without adding placeholder modules.
 
+### Creation And Editing Pass 1
+
+- Grouped event fields into time, ownership, reminder, memo, and linked-record
+  sections instead of presenting one long settings list.
+- Kept event and date-record save actions visible while form content scrolls.
+- Made title fields visually primary and replaced generic date inputs with
+  clear selection rows.
+- Grouped date-record fields into date, place, memory, and photo sections.
+
+### Visual Tone Pass 1
+
+- Replaced the strong pink-and-black action contrast with muted blue and
+  slate tones.
+- Use lilac for secondary selection and coral only for emotional date and
+  heart accents.
+- Updated calendar ownership and event colors to avoid orange and pink
+  competing across the month grid.
+
 ## Next Passes
 
 ### P1: Date Record Journey
@@ -52,12 +72,6 @@ feature behavior still belongs in the owning product specs.
 - Make linked bucket items and reviews identifiable by title and representative
   icon.
 - Keep unlinking and destructive actions inside edit or overflow actions.
-
-### P2: Creation And Editing
-
-- Standardize editor headers, save actions, field spacing, and validation.
-- Prefer pickers and selection sheets over free-form identifiers.
-- Verify cancel/back behavior never loses work without warning.
 
 ### P2: Onboarding And Settings
 

@@ -13,7 +13,7 @@ Future<void> showEventEditorSheet({
   String initialTitle = '',
   String initialMemo = '',
   bool initialIsAllDay = false,
-  int initialColorValue = 0xFF4D7C8A,
+  int initialColorValue = 0xFF4169E1,
   EventOwnership initialOwnership = EventOwnership.personal,
   DateTime? initialEndAt,
   int? initialDurationHours,
@@ -54,7 +54,7 @@ class EventEditorSheet extends StatefulWidget {
     this.initialTitle = '',
     this.initialMemo = '',
     this.initialIsAllDay = false,
-    this.initialColorValue = 0xFF4D7C8A,
+    this.initialColorValue = 0xFF4169E1,
     this.initialOwnership = EventOwnership.personal,
     this.initialEndAt,
     this.initialDurationHours,
@@ -119,183 +119,251 @@ class _EventEditorSheetState extends State<EventEditorSheet> {
     final scheme = Theme.of(context).colorScheme;
 
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
-        child: SingleChildScrollView(
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: FractionallySizedBox(
+          heightFactor: 0.94,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Text(
-                    widget.sheetTitle,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    tooltip: '닫기',
-                    onPressed: _isSaving
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: '제목',
-                  border: OutlineInputBorder(),
-                ),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 12),
-              _DateTimeRow(
-                label: '시작',
-                date: _startDate,
-                time: _startTime,
-                showTime: !_isAllDay,
-                onPickDate: () => _pickDate(isStart: true),
-                onPickTime: () => _pickTime(isStart: true),
-              ),
               const SizedBox(height: 8),
-              _DateTimeRow(
-                label: '종료',
-                date: _endDate,
-                time: _endTime,
-                showTime: !_isAllDay,
-                onPickDate: () => _pickDate(isStart: false),
-                onPickTime: () => _pickTime(isStart: false),
-              ),
-              const SizedBox(height: 4),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('하루 종일'),
-                value: _isAllDay,
-                onChanged: (value) => setState(() => _isAllDay = value),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _memoController,
-                decoration: const InputDecoration(
-                  labelText: '메모',
-                  border: OutlineInputBorder(),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: scheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(99),
                 ),
-                minLines: 2,
-                maxLines: 4,
               ),
-              const SizedBox(height: 14),
-              Text('소유', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 8),
-              SegmentedButton<EventOwnership>(
-                segments: const [
-                  ButtonSegment(
-                    value: EventOwnership.personal,
-                    icon: Icon(Icons.person_outline),
-                    label: Text('내 일정'),
-                  ),
-                  ButtonSegment(
-                    value: EventOwnership.shared,
-                    icon: Icon(Icons.favorite_outline),
-                    label: Text('우리 일정'),
-                  ),
-                ],
-                selected: {_ownership},
-                onSelectionChanged: (selection) {
-                  setState(() {
-                    _ownership = selection.single;
-                    _colorValue = _ownership == EventOwnership.shared
-                        ? 0xFF7C6A9E
-                        : 0xFF4D7C8A;
-                  });
-                },
-              ),
-              const SizedBox(height: 14),
-              Text('색상', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [0xFF4D7C8A, 0xFFC67C4E, 0xFF7C6A9E, 0xFF5D8C61].map((
-                  value,
-                ) {
-                  final selected = value == _colorValue;
-                  return ChoiceChip(
-                    showCheckmark: false,
-                    label: const SizedBox(width: 18, height: 18),
-                    selected: selected,
-                    avatar: CircleAvatar(backgroundColor: Color(value)),
-                    onSelected: (_) => setState(() => _colorValue = value),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 14),
-              DropdownButtonFormField<int?>(
-                initialValue: _reminderOffsetMinutes,
-                decoration: const InputDecoration(
-                  labelText: '알림',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('없음')),
-                  DropdownMenuItem(value: 10, child: Text('10분 전')),
-                  DropdownMenuItem(value: 60, child: Text('1시간 전')),
-                  DropdownMenuItem(value: 1440, child: Text('하루 전')),
-                ],
-                onChanged: (value) =>
-                    setState(() => _reminderOffsetMinutes = value),
-              ),
-              if (widget.previewLinkedItems.isNotEmpty ||
-                  _linkedItems.isNotEmpty ||
-                  widget.onAddLinkedItem != null) ...[
-                const SizedBox(height: 14),
-                Text('연결', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 12, 8),
+                child: Row(
                   children: [
-                    ..._linkedItems.map((item) {
-                      return InputChip(
-                        avatar: Icon(linkedItemTypeIcon(item.type), size: 18),
-                        label: Text(item.title),
-                        onDeleted: () =>
-                            setState(() => _linkedItems.remove(item)),
-                      );
-                    }),
-                    ...widget.previewLinkedItems.map((item) {
-                      return Chip(
-                        avatar: Icon(linkedItemTypeIcon(item.type), size: 18),
-                        label: Text('${item.title} 예정'),
-                      );
-                    }),
-                    if (widget.onAddLinkedItem != null)
-                      ActionChip(
-                        avatar: const Icon(Icons.add_link, size: 18),
-                        label: const Text('버킷리스트 연결'),
-                        onPressed: _addLinkedItem,
+                    Expanded(
+                      child: Text(
+                        widget.sheetTitle,
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
+                    ),
+                    IconButton(
+                      tooltip: '닫기',
+                      onPressed: _isSaving
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
                   ],
                 ),
-              ],
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _isSaving ? null : _save,
-                  icon: _isSaving
-                      ? SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: scheme.onPrimary,
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: _titleController,
+                        autofocus: widget.initialTitle.isEmpty,
+                        style: Theme.of(context).textTheme.titleLarge,
+                        decoration: const InputDecoration(
+                          hintText: '일정 제목',
+                          prefixIcon: Icon(Icons.edit_outlined),
+                        ),
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 14),
+                      _EventEditorSection(
+                        icon: Icons.schedule_outlined,
+                        title: '언제',
+                        child: Column(
+                          children: [
+                            _DateTimeRow(
+                              label: '시작',
+                              date: _startDate,
+                              time: _startTime,
+                              showTime: !_isAllDay,
+                              onPickDate: () => _pickDate(isStart: true),
+                              onPickTime: () => _pickTime(isStart: true),
+                            ),
+                            const SizedBox(height: 8),
+                            _DateTimeRow(
+                              label: '종료',
+                              date: _endDate,
+                              time: _endTime,
+                              showTime: !_isAllDay,
+                              onPickDate: () => _pickDate(isStart: false),
+                              onPickTime: () => _pickTime(isStart: false),
+                            ),
+                            const SizedBox(height: 4),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text('하루 종일'),
+                              subtitle: const Text('시간 없이 날짜만 표시해요.'),
+                              value: _isAllDay,
+                              onChanged: (value) =>
+                                  setState(() => _isAllDay = value),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _EventEditorSection(
+                        icon: Icons.people_outline,
+                        title: '누구의 일정인가요?',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SegmentedButton<EventOwnership>(
+                              expandedInsets: EdgeInsets.zero,
+                              segments: const [
+                                ButtonSegment(
+                                  value: EventOwnership.personal,
+                                  icon: Icon(Icons.person_outline),
+                                  label: Text('내 일정'),
+                                ),
+                                ButtonSegment(
+                                  value: EventOwnership.shared,
+                                  icon: Icon(Icons.favorite_outline),
+                                  label: Text('우리 일정'),
+                                ),
+                              ],
+                              selected: {_ownership},
+                              onSelectionChanged: (selection) {
+                                setState(() {
+                                  _ownership = selection.single;
+                                  _colorValue =
+                                      _ownership == EventOwnership.shared
+                                      ? 0xFF7C6EE6
+                                      : 0xFF4169E1;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              '캘린더 색상',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children:
+                                  [
+                                    0xFF4169E1,
+                                    0xFF7C6EE6,
+                                    0xFFE85D75,
+                                    0xFF16A085,
+                                  ].map((value) {
+                                    final selected = value == _colorValue;
+                                    return ChoiceChip(
+                                      showCheckmark: selected,
+                                      label: const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                      ),
+                                      selected: selected,
+                                      avatar: CircleAvatar(
+                                        backgroundColor: Color(value),
+                                      ),
+                                      onSelected: (_) =>
+                                          setState(() => _colorValue = value),
+                                    );
+                                  }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _EventEditorSection(
+                        icon: Icons.notifications_none,
+                        title: '알림',
+                        child: DropdownButtonFormField<int?>(
+                          initialValue: _reminderOffsetMinutes,
+                          decoration: const InputDecoration(hintText: '알림 시점'),
+                          items: const [
+                            DropdownMenuItem(value: null, child: Text('알림 없음')),
+                            DropdownMenuItem(value: 10, child: Text('10분 전')),
+                            DropdownMenuItem(value: 60, child: Text('1시간 전')),
+                            DropdownMenuItem(value: 1440, child: Text('하루 전')),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _reminderOffsetMinutes = value),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _EventEditorSection(
+                        icon: Icons.notes_outlined,
+                        title: '메모',
+                        child: TextField(
+                          controller: _memoController,
+                          decoration: const InputDecoration(
+                            hintText: '일정에 필요한 내용을 남겨보세요.',
                           ),
-                        )
-                      : const Icon(Icons.check),
-                  label: const Text('저장'),
+                          minLines: 3,
+                          maxLines: 6,
+                        ),
+                      ),
+                      if (widget.previewLinkedItems.isNotEmpty ||
+                          _linkedItems.isNotEmpty ||
+                          widget.onAddLinkedItem != null) ...[
+                        const SizedBox(height: 14),
+                        _EventEditorSection(
+                          icon: Icons.link,
+                          title: '연결된 기록',
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ..._linkedItems.map((item) {
+                                return InputChip(
+                                  avatar: Icon(
+                                    linkedItemTypeIcon(item.type),
+                                    size: 18,
+                                  ),
+                                  label: Text(item.title),
+                                  onDeleted: () =>
+                                      setState(() => _linkedItems.remove(item)),
+                                );
+                              }),
+                              ...widget.previewLinkedItems.map((item) {
+                                return Chip(
+                                  avatar: Icon(
+                                    linkedItemTypeIcon(item.type),
+                                    size: 18,
+                                  ),
+                                  label: Text('${item.title} 예정'),
+                                );
+                              }),
+                              if (widget.onAddLinkedItem != null)
+                                ActionChip(
+                                  avatar: const Icon(Icons.add_link, size: 18),
+                                  label: const Text('버킷리스트 연결'),
+                                  onPressed: _addLinkedItem,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _isSaving ? null : _save,
+                    icon: _isSaving
+                        ? SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: scheme.onPrimary,
+                            ),
+                          )
+                        : const Icon(Icons.check),
+                    label: const Text('일정 저장'),
+                  ),
                 ),
               ),
             ],
@@ -480,47 +548,133 @@ class _DateTimeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 44,
-          height: 56,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+    final theme = Theme.of(context);
+    final isStart = label == '시작';
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: onPickDate,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isStart ? Icons.play_arrow_rounded : Icons.stop_rounded,
+                        size: 18,
+                        color: theme.colorScheme.secondary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(label, style: theme.textTheme.bodySmall),
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatDate(date),
+                            style: theme.textTheme.titleSmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onPickDate,
-            icon: const Icon(Icons.calendar_today_outlined, size: 18),
-            label: Text(dates.formatDateLabel(date)),
-          ),
-        ),
-        if (showTime) ...[
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 104,
-            child: OutlinedButton.icon(
-              onPressed: onPickTime,
-              icon: const Icon(Icons.schedule, size: 18),
-              label: Text(_formatTime(time)),
+          if (showTime) ...[
+            Container(
+              width: 1,
+              height: 38,
+              color: theme.colorScheme.outlineVariant,
             ),
-          ),
+            InkWell(
+              onTap: onPickTime,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 18,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.schedule_outlined,
+                      size: 17,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(_formatTime(time), style: theme.textTheme.titleSmall),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
+  }
+
+  String _formatDate(DateTime value) {
+    const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    return '${value.month}월 ${value.day}일 ${weekdays[value.weekday - 1]}요일';
   }
 
   String _formatTime(TimeOfDay time) {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+}
+
+class _EventEditorSection extends StatelessWidget {
+  const _EventEditorSection({
+    required this.icon,
+    required this.title,
+    required this.child,
+  });
+
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 19, color: theme.colorScheme.secondary),
+              const SizedBox(width: 8),
+              Text(title, style: theme.textTheme.titleSmall),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
   }
 }

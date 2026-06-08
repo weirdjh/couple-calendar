@@ -177,7 +177,7 @@ class _CalendarEventMapper {
       isAllDay: data[CalendarEventFields.isAllDay] as bool? ?? false,
       memo: data[CalendarEventFields.memo] as String? ?? '',
       kind: _readKind(data[CalendarEventFields.kind]),
-      colorValue: data[CalendarEventFields.colorValue] as int? ?? 0xFF4D7C8A,
+      colorValue: data[CalendarEventFields.colorValue] as int? ?? 0xFF4169E1,
       ownership: _readOwnership(data[CalendarEventFields.ownership]),
       ownerUserId: data[CalendarEventFields.ownerUserId] as String? ?? '',
       watcherUserIds: _readStringList(data[CalendarEventFields.watcherUserIds]),

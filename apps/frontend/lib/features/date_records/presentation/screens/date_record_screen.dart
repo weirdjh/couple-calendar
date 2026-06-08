@@ -513,10 +513,10 @@ class _DateRecordEditScreenState extends ConsumerState<DateRecordEditScreen> {
     final isEditing = record != null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isEditing ? '데이트 편집' : '데이트 기록 추가')),
+      appBar: AppBar(title: Text(isEditing ? '데이트 기록 편집' : '데이트 기록 추가')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
             _DateRecordForm(
               titleController: _titleController,
@@ -536,10 +536,18 @@ class _DateRecordEditScreenState extends ConsumerState<DateRecordEditScreen> {
                   record == null || record.linkedEventId == null
                   ? null
                   : () => _disconnectCalendarEvent(record),
-              onSave: () => _save(record),
-              actionLabel: isEditing ? '변경 저장' : '기록 저장',
             ),
           ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+        child: FilledButton.icon(
+          onPressed: ref.watch(dateRecordControllerProvider).isSaving
+              ? null
+              : () => _save(record),
+          icon: const Icon(Icons.check),
+          label: Text(isEditing ? '변경사항 저장' : '데이트 기록 저장'),
         ),
       ),
     );
@@ -664,7 +672,7 @@ class _DateRecordEditScreenState extends ConsumerState<DateRecordEditScreen> {
             isAllDay: true,
             kind: CalendarEventKind.date,
             memo: record.memo,
-            colorValue: 0xFFE77AA2,
+            colorValue: 0xFFE85D75,
             ownership: EventOwnership.shared,
             linkedItems: [_linkedItemForRecord(record)],
           ),
@@ -756,8 +764,6 @@ class _DateRecordForm extends StatelessWidget {
     required this.onRemovePhoto,
     required this.linkedEventId,
     required this.onDisconnectCalendar,
-    required this.onSave,
-    required this.actionLabel,
   });
 
   final TextEditingController titleController;
@@ -772,119 +778,216 @@ class _DateRecordForm extends StatelessWidget {
   final ValueChanged<String> onRemovePhoto;
   final String? linkedEventId;
   final VoidCallback? onDisconnectCalendar;
-  final VoidCallback onSave;
-  final String actionLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: Column(
-        children: [
-          TextField(
-            controller: titleController,
-            decoration: const InputDecoration(
-              labelText: '데이트 제목',
-              border: OutlineInputBorder(),
-            ),
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: titleController,
+          style: theme.textTheme.titleLarge,
+          decoration: const InputDecoration(
+            hintText: '어떤 데이트였나요?',
+            prefixIcon: Icon(Icons.favorite_outline),
           ),
-          const SizedBox(height: 10),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(calendarEventLinkIcon),
-            title: const Text('날짜'),
-            subtitle: Text(dates.formatDateLabel(date)),
-            trailing: const Icon(Icons.edit_calendar_outlined),
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 20),
+        _DateRecordEditorSection(
+          icon: Icons.calendar_today_outlined,
+          title: '날짜',
+          child: _DateRecordSelectionRow(
+            title: dates.formatDateLabel(date),
+            subtitle: '데이트한 날',
+            icon: Icons.edit_calendar_outlined,
             onTap: onPickDate,
           ),
-          if (linkedEventId != null) ...[
-            const SizedBox(height: 4),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(calendarEventLinkIcon),
-              title: const Text('일정'),
-              subtitle: const Text('연결됨'),
-              trailing: IconButton(
-                tooltip: '해제',
-                onPressed: onDisconnectCalendar,
-                icon: const Icon(Icons.link_off),
-              ),
-            ),
-          ],
-          TextField(
-            controller: placeNameController,
-            decoration: const InputDecoration(
-              labelText: '장소 이름',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: placeAddressController,
-            decoration: const InputDecoration(
-              labelText: '주소 또는 설명',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: memoController,
-            decoration: const InputDecoration(
-              labelText: '메모',
-              border: OutlineInputBorder(),
-            ),
-            minLines: 2,
-            maxLines: 4,
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: photoController,
-                  decoration: const InputDecoration(
-                    labelText: '사진 메모 또는 파일명',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                tooltip: '사진 추가',
-                onPressed: onAddPhoto,
-                icon: const Icon(Icons.add_photo_alternate_outlined),
-              ),
-            ],
-          ),
-          if (photoLabels.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: photoLabels.map((label) {
-                return InputChip(
-                  avatar: const Icon(Icons.photo_outlined, size: 18),
-                  label: Text(label),
-                  onDeleted: () => onRemovePhoto(label),
-                );
-              }).toList(),
-            ),
-          ],
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: onSave,
-              icon: const Icon(Icons.check),
-              label: Text(actionLabel),
+        ),
+        if (linkedEventId != null) ...[
+          const SizedBox(height: 14),
+          _DateRecordEditorSection(
+            icon: calendarEventLinkIcon,
+            title: '연결된 일정',
+            child: _DateRecordSelectionRow(
+              title: '캘린더 일정과 연결됨',
+              subtitle: '기록을 수정하면 일정에도 반영돼요.',
+              icon: Icons.link_off,
+              onTap: onDisconnectCalendar,
             ),
           ),
         ],
+        const SizedBox(height: 14),
+        _DateRecordEditorSection(
+          icon: Icons.place_outlined,
+          title: '장소',
+          subtitle: '기억하고 싶은 장소가 있다면 남겨보세요.',
+          child: Column(
+            children: [
+              TextField(
+                controller: placeNameController,
+                decoration: const InputDecoration(hintText: '장소 이름'),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: placeAddressController,
+                decoration: const InputDecoration(hintText: '주소 또는 장소 설명'),
+                textInputAction: TextInputAction.next,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        _DateRecordEditorSection(
+          icon: Icons.notes_outlined,
+          title: '추억',
+          subtitle: '그날의 분위기나 기억을 자유롭게 적어보세요.',
+          child: TextField(
+            controller: memoController,
+            decoration: const InputDecoration(hintText: '함께 남기고 싶은 이야기'),
+            minLines: 3,
+            maxLines: 6,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _DateRecordEditorSection(
+          icon: Icons.photo_outlined,
+          title: '사진',
+          subtitle: '지금은 사진을 설명하는 이름으로 기록해요.',
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: photoController,
+                      decoration: const InputDecoration(
+                        hintText: '사진 메모 또는 파일명',
+                      ),
+                      onSubmitted: (_) => onAddPhoto(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    tooltip: '사진 추가',
+                    onPressed: onAddPhoto,
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                  ),
+                ],
+              ),
+              if (photoLabels.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: photoLabels.map((label) {
+                      return InputChip(
+                        avatar: const Icon(Icons.photo_outlined, size: 18),
+                        label: Text(label),
+                        onDeleted: () => onRemovePhoto(label),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DateRecordEditorSection extends StatelessWidget {
+  const _DateRecordEditorSection({
+    required this.icon,
+    required this.title,
+    required this.child,
+    this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 19, color: theme.colorScheme.secondary),
+              const SizedBox(width: 8),
+              Text(title, style: theme.textTheme.titleSmall),
+            ],
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(subtitle!, style: theme.textTheme.bodySmall),
+          ],
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _DateRecordSelectionRow extends StatelessWidget {
+  const _DateRecordSelectionRow({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: theme.textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              Icon(icon, color: theme.colorScheme.onSurfaceVariant),
+            ],
+          ),
+        ),
       ),
     );
   }

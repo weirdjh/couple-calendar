@@ -145,7 +145,7 @@ List<CalendarEvent> _seedEvents(DateTime today) {
       startAt: dinnerStart,
       endAt: dinnerStart.add(const Duration(hours: 2)),
       memo: '퇴근 후 성수에서 만나기',
-      colorValue: 0xFF4D7C8A,
+      colorValue: 0xFF4169E1,
       ownership: EventOwnership.personal,
       ownerUserId: userId,
       reminders: [
@@ -171,7 +171,7 @@ List<CalendarEvent> _seedEvents(DateTime today) {
       isAllDay: true,
       kind: CalendarEventKind.date,
       memo: '버킷리스트 등산을 데이트 기록으로 남기기',
-      colorValue: 0xFFC67C4E,
+      colorValue: 0xFF7B879D,
       ownership: EventOwnership.shared,
       ownerUserId: userId,
       linkedItems: [
@@ -199,7 +199,7 @@ List<CalendarEvent> _seedEvents(DateTime today) {
       endAt: tripStart.add(const Duration(days: 3)),
       isAllDay: true,
       memo: '2박 3일 여행 일정',
-      colorValue: 0xFF7C6A9E,
+      colorValue: 0xFF7C6EE6,
       ownership: EventOwnership.shared,
       ownerUserId: userId,
       createdBy: userId,
@@ -214,7 +214,7 @@ List<CalendarEvent> _seedEvents(DateTime today) {
       endAt: movieDay.add(const Duration(hours: 23)),
       kind: CalendarEventKind.date,
       memo: '리뷰 모듈이 생기면 별점과 감상 기록을 여기에 연결',
-      colorValue: 0xFF7C6A9E,
+      colorValue: 0xFF7C6EE6,
       ownership: EventOwnership.personal,
       ownerUserId: 'demo-user-2',
       linkedItems: [

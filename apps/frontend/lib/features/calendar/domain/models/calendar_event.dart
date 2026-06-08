@@ -15,7 +15,7 @@ class CalendarEvent {
     this.isAllDay = false,
     this.memo = '',
     this.kind = CalendarEventKind.schedule,
-    this.colorValue = 0xFF4D7C8A,
+    this.colorValue = 0xFF4169E1,
     this.ownership = EventOwnership.personal,
     this.ownerUserId = '',
     this.watcherUserIds = const [],
