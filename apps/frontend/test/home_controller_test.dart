@@ -3,6 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('uses the injected initial home state', () {
+    const initial = HomeState(coverImageUrl: 'https://example.com/cover.jpg');
+    final container = ProviderContainer(
+      overrides: [initialHomeStateProvider.overrideWithValue(initial)],
+    );
+    addTearDown(container.dispose);
+
+    expect(container.read(homeControllerProvider), same(initial));
+  });
+
   test('stores and clears the cover image URL', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);

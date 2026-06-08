@@ -18,6 +18,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('오늘'), findsOneWidget);
+    expect(find.text('다가오는 일정'), findsOneWidget);
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -250));
     await tester.pumpAndSettle();
     expect(find.text('고정'), findsOneWidget);
@@ -41,6 +42,8 @@ void main() {
 
     expect(find.text('기념일'), findsOneWidget);
     expect(find.text('버킷리스트'), findsOneWidget);
+    expect(find.text('4개의 바람'), findsOneWidget);
+    expect(find.text('2개의 추억'), findsOneWidget);
 
     await tester.tap(find.text('버킷리스트'));
     await tester.pumpAndSettle();

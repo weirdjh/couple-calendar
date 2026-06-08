@@ -27,21 +27,24 @@ feature behavior still belongs in the owning product specs.
 - Hid empty memo and reminder sections.
 - Show linked content as content rows; show only relevant add actions.
 
+### Home Pass 1
+
+- Keep the representative photo prominent when configured and compact when
+  empty.
+- Move today's date and event count into a small photo footer.
+- Remove the duplicate today summary block.
+- Make pinned event and anniversary summaries open their source screen.
+- Show upcoming events as a date-first list for faster scanning.
+- Hide the empty pinned-content body while keeping its add action available.
+
+### Records Hub Pass 1
+
+- Made Date records, Bucket list, Reviews, and Anniversaries visually
+  distinguishable with compact colored cards.
+- Show useful counts, the next anniversary, latest date record, and average
+  review rating without adding placeholder modules.
+
 ## Next Passes
-
-### P1: Home
-
-- Make the representative photo the visual focus.
-- Make pinned anniversary/event summaries open their source.
-- Reduce empty explanatory areas and strengthen upcoming-event scanning.
-- Clarify the distinction between pinned content and upcoming content.
-
-### P1: Records Hub
-
-- Make Date records, Bucket list, Reviews, and Anniversaries visually
-  distinguishable without descriptions.
-- Show useful counts or recent state only when actionable.
-- Remove placeholder or unavailable modules from primary navigation.
 
 ### P1: Date Record Journey
 

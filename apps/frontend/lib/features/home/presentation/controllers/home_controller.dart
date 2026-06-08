@@ -4,6 +4,10 @@ final homeControllerProvider = NotifierProvider<HomeController, HomeState>(
   HomeController.new,
 );
 
+final initialHomeStateProvider = Provider<HomeState>((ref) {
+  return const HomeState();
+});
+
 class HomeState {
   const HomeState({
     this.coverImageUrl,
@@ -34,7 +38,7 @@ class HomeState {
 class HomeController extends Notifier<HomeState> {
   @override
   HomeState build() {
-    return const HomeState();
+    return ref.watch(initialHomeStateProvider);
   }
 
   void setCoverImageUrl(String value) {

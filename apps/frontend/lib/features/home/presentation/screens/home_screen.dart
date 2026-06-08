@@ -6,6 +6,7 @@ import '../../../../app/theme/app_theme.dart';
 import '../../../../core/time/calendar_date_utils.dart' as dates;
 import '../../../anniversaries/domain/models/anniversary.dart';
 import '../../../anniversaries/presentation/controllers/anniversary_controller.dart';
+import '../../../anniversaries/presentation/screens/anniversary_screen.dart';
 import '../../../calendar/domain/models/calendar_event.dart';
 import '../../../calendar/presentation/controllers/calendar_controller.dart';
 import '../../../calendar/presentation/screens/event_detail_screen.dart';
@@ -39,7 +40,7 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             _CoverHero(
               imageUrl: homeState.coverImageUrl,
@@ -57,6 +58,9 @@ class HomeScreen extends ConsumerWidget {
                 upcomingOccurrences: upcomingAnniversaries,
               ),
               onOpenEvent: (event) => _openEvent(context, ref, event),
+              onOpenAnniversary: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AnniversaryScreen()),
+              ),
               onRemoveEvent: (eventId) {
                 ref
                     .read(homeControllerProvider.notifier)
@@ -68,19 +72,15 @@ class HomeScreen extends ConsumerWidget {
                     .removeAnniversaryPin(anniversaryId);
               },
             ),
-            const SizedBox(height: 24),
-            _TodayStrip(events: todayEvents),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             _SectionTitle(
-              title: '일정',
+              title: '다가오는 일정',
               actionIcon: Icons.calendar_month_outlined,
               onPressed: () =>
                   ref.read(selectedAppTabProvider.notifier).selectCalendar(),
             ),
-            const SizedBox(height: 10),
-            if (upcomingEvents.isEmpty)
-              const _EmptyBlock(text: '없음')
-            else
+            if (upcomingEvents.isNotEmpty) ...[
+              const SizedBox(height: 8),
               ...upcomingEvents.take(5).map((event) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -90,6 +90,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 );
               }),
+            ],
           ],
         ),
       ),
@@ -127,63 +128,17 @@ class _CoverHero extends StatelessWidget {
         side: const BorderSide(color: AppPalette.line),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppPalette.softRose,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppPalette.line),
-                  ),
-                  child: const Icon(
-                    Icons.favorite,
-                    color: AppPalette.rose,
-                    size: 19,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '오늘',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${dates.formatDateLabel(DateTime.now())} · $todayEventCount',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  tooltip: '대표 사진',
-                  onPressed: onEditImage,
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
-                ),
-              ],
-            ),
-          ),
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(8),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final mediaHeight = constraints.maxWidth > 520
-                    ? 300.0
-                    : constraints.maxWidth / 1.35;
+                final mediaHeight = hasImage
+                    ? (constraints.maxWidth > 520
+                          ? 300.0
+                          : constraints.maxWidth / 1.65)
+                    : 132.0;
                 return SizedBox(
                   height: mediaHeight,
                   child: Stack(
@@ -204,10 +159,62 @@ class _CoverHero extends StatelessWidget {
                             color: Colors.black.withValues(alpha: 0.10),
                           ),
                         ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: IconButton.filled(
+                          tooltip: '대표 사진',
+                          onPressed: onEditImage,
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.92,
+                            ),
+                            foregroundColor: AppPalette.ink,
+                          ),
+                          icon: Icon(
+                            hasImage
+                                ? Icons.edit_outlined
+                                : Icons.add_photo_alternate_outlined,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 );
               },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 11, 14, 12),
+            child: Row(
+              children: [
+                const Icon(Icons.favorite, color: AppPalette.rose, size: 19),
+                const SizedBox(width: 8),
+                Text(
+                  '오늘',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    dates.formatDateLabel(DateTime.now()),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                Text(
+                  '$todayEventCount',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: todayEventCount == 0
+                        ? AppPalette.mutedInk
+                        : AppPalette.rose,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -225,8 +232,8 @@ class _CoverPlaceholder extends StatelessWidget {
       decoration: const BoxDecoration(color: AppPalette.shell),
       child: Center(
         child: Container(
-          width: 86,
-          height: 86,
+          width: 52,
+          height: 52,
           decoration: BoxDecoration(
             color: AppPalette.paper,
             borderRadius: BorderRadius.circular(8),
@@ -234,8 +241,8 @@ class _CoverPlaceholder extends StatelessWidget {
           ),
           child: const Icon(
             Icons.photo_camera_outlined,
-            color: AppPalette.ink,
-            size: 34,
+            color: AppPalette.mutedInk,
+            size: 24,
           ),
         ),
       ),
@@ -248,6 +255,7 @@ class _PinnedSection extends StatelessWidget {
     required this.items,
     required this.onManage,
     required this.onOpenEvent,
+    required this.onOpenAnniversary,
     required this.onRemoveEvent,
     required this.onRemoveAnniversary,
   });
@@ -255,6 +263,7 @@ class _PinnedSection extends StatelessWidget {
   final List<_HomePinnedItem> items;
   final VoidCallback onManage;
   final ValueChanged<CalendarEvent> onOpenEvent;
+  final VoidCallback onOpenAnniversary;
   final ValueChanged<String> onRemoveEvent;
   final ValueChanged<String> onRemoveAnniversary;
 
@@ -268,12 +277,10 @@ class _PinnedSection extends StatelessWidget {
           actionIcon: Icons.tune_outlined,
           onPressed: onManage,
         ),
-        const SizedBox(height: 10),
-        if (items.isEmpty)
-          _EmptyBlock(text: '없음', actionIcon: Icons.add, onAction: onManage)
-        else
+        if (items.isNotEmpty) ...[
+          const SizedBox(height: 8),
           SizedBox(
-            height: 126,
+            height: 104,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: items.length,
@@ -283,7 +290,7 @@ class _PinnedSection extends StatelessWidget {
                 return _PinnedCard(
                   item: item,
                   onTap: item.event == null
-                      ? null
+                      ? onOpenAnniversary
                       : () => onOpenEvent(item.event!),
                   onRemove: () {
                     if (item.event != null) {
@@ -296,6 +303,7 @@ class _PinnedSection extends StatelessWidget {
               },
             ),
           ),
+        ],
       ],
     );
   }
@@ -323,7 +331,7 @@ class _PinnedCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(14, 10, 8, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -339,7 +347,6 @@ class _PinnedCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const Spacer(),
                 Text(
                   item.title,
                   maxLines: 1,
@@ -361,50 +368,6 @@ class _PinnedCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TodayStrip extends StatelessWidget {
-  const _TodayStrip({required this.events});
-
-  final List<CalendarEvent> events;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppPalette.paper,
-        border: Border.all(color: AppPalette.line),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.today_outlined, color: AppPalette.ink),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              events.isEmpty ? '비어 있음' : events.first.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            events.isEmpty ? '0개' : '${events.length}개',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.primary,
-              letterSpacing: 0,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -453,6 +416,7 @@ class _EventCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = Color(event.colorValue);
     final theme = Theme.of(context);
+    final displayDate = _eventDisplayDate(event);
     return Material(
       color: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
@@ -463,20 +427,34 @@ class _EventCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 70),
+          constraints: const BoxConstraints(minHeight: 66),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                Container(
-                  width: 6,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(8),
+                SizedBox(
+                  width: 42,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${displayDate.month}월',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppPalette.mutedInk,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        '${displayDate.day}',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -517,40 +495,6 @@ class _EventCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _EmptyBlock extends StatelessWidget {
-  const _EmptyBlock({required this.text, this.actionIcon, this.onAction});
-
-  final String text;
-  final IconData? actionIcon;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          Expanded(child: Text(text)),
-          if (actionIcon != null && onAction != null) ...[
-            const SizedBox(width: 8),
-            IconButton.filledTonal(
-              tooltip: '홈에 추가',
-              onPressed: onAction,
-              icon: Icon(actionIcon),
-            ),
-          ],
-        ],
       ),
     );
   }
@@ -815,6 +759,16 @@ DateTime _eventVisibleEndDate(CalendarEvent event) {
     return dates.dateOnly(event.endAt).subtract(const Duration(days: 1));
   }
   return dates.dateOnly(event.endAt);
+}
+
+DateTime _eventDisplayDate(CalendarEvent event) {
+  final today = dates.dateOnly(DateTime.now());
+  final startDate = _eventVisibleStartDate(event);
+  final endDate = _eventVisibleEndDate(event);
+  if (!today.isBefore(startDate) && !today.isAfter(endDate)) {
+    return today;
+  }
+  return startDate;
 }
 
 Future<void> _showCoverImageDialog(BuildContext context, WidgetRef ref) async {
