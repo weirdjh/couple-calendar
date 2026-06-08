@@ -17,6 +17,8 @@ void main() {
     await tester.tap(find.text('홈'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Couple Calendar'), findsOneWidget);
+    expect(find.byTooltip('알림'), findsOneWidget);
     expect(find.text('오늘'), findsOneWidget);
     expect(find.text('다가오는 일정'), findsOneWidget);
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -250));

@@ -64,6 +64,14 @@ feature behavior still belongs in the owning product specs.
 - Updated calendar ownership and event colors to avoid orange and pink
   competing across the month grid.
 
+### Home Header Pass 1
+
+- Added a compact brand header above the representative photo.
+- Added an in-app reminder inbox that lists upcoming reminder settings and
+  opens their event details.
+- The reminder inbox does not schedule or deliver operating-system
+  notifications; local and push notification delivery remain future work.
+
 ## Next Passes
 
 ### P1: Date Record Journey

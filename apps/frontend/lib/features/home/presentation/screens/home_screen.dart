@@ -30,6 +30,13 @@ class HomeScreen extends ConsumerWidget {
     final upcomingEvents = calendarState.events.where((event) {
       return !_eventVisibleEndDate(event).isBefore(today);
     }).toList()..sort(_compareUpcomingEvents);
+    final reminderEvents =
+        upcomingEvents
+            .where(
+              (event) => event.reminders.any((reminder) => reminder.enabled),
+            )
+            .toList()
+          ..sort(_compareReminderEvents);
     final pinnedItems = _homePinnedItems(
       events: calendarState.events,
       anniversaryOccurrences: upcomingAnniversaries,
@@ -42,6 +49,15 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
+            _HomeHeader(
+              notificationCount: reminderEvents.length,
+              onOpenNotifications: () => _showNotificationSheet(
+                context,
+                events: reminderEvents,
+                onOpenEvent: (event) => _openEvent(context, ref, event),
+              ),
+            ),
+            const SizedBox(height: 14),
             _CoverHero(
               imageUrl: homeState.coverImageUrl,
               todayEventCount: todayEvents.length,
@@ -101,6 +117,88 @@ class HomeScreen extends ConsumerWidget {
     ref.read(calendarControllerProvider.notifier).selectDate(event.startAt);
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
+    );
+  }
+}
+
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({
+    required this.notificationCount,
+    required this.onOpenNotifications,
+  });
+
+  final int notificationCount;
+  final VoidCallback onOpenNotifications;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: const Icon(
+              Icons.favorite_rounded,
+              color: Colors.white,
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Couple Calendar', style: theme.textTheme.titleSmall),
+                Text('우리의 하루', style: theme.textTheme.bodySmall),
+              ],
+            ),
+          ),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                tooltip: '알림',
+                onPressed: onOpenNotifications,
+                style: IconButton.styleFrom(
+                  backgroundColor: theme.colorScheme.surface,
+                  side: BorderSide(color: theme.colorScheme.outlineVariant),
+                ),
+                icon: const Icon(Icons.notifications_none_rounded),
+              ),
+              if (notificationCount > 0)
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 18),
+                    height: 18,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: AppPalette.rose,
+                      borderRadius: BorderRadius.circular(99),
+                      border: Border.all(color: theme.colorScheme.surface),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$notificationCount',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -769,6 +867,119 @@ DateTime _eventDisplayDate(CalendarEvent event) {
     return today;
   }
   return startDate;
+}
+
+int _compareReminderEvents(CalendarEvent left, CalendarEvent right) {
+  return _nextReminderAt(left).compareTo(_nextReminderAt(right));
+}
+
+DateTime _nextReminderAt(CalendarEvent event) {
+  final reminders =
+      event.reminders.where((reminder) => reminder.enabled).toList()
+        ..sort((left, right) => left.remindAt.compareTo(right.remindAt));
+  return reminders.first.remindAt;
+}
+
+Future<void> _showNotificationSheet(
+  BuildContext context, {
+  required List<CalendarEvent> events,
+  required ValueChanged<CalendarEvent> onOpenEvent,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      final theme = Theme.of(sheetContext);
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text('다가오는 알림', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 4),
+              Text('알림을 설정한 일정만 보여드려요.', style: theme.textTheme.bodySmall),
+              const SizedBox(height: 16),
+              if (events.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 28),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '예정된 알림이 없어요.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: events.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final event = events[index];
+                      final reminder = event.reminders
+                          .where((item) => item.enabled)
+                          .reduce(
+                            (left, right) =>
+                                left.remindAt.isBefore(right.remindAt)
+                                ? left
+                                : right,
+                          );
+                      return ListTile(
+                        tileColor: theme.colorScheme.surface,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                        ),
+                        leading: CircleAvatar(
+                          backgroundColor: Color(
+                            event.colorValue,
+                          ).withValues(alpha: 0.12),
+                          foregroundColor: Color(event.colorValue),
+                          child: const Icon(Icons.notifications_outlined),
+                        ),
+                        title: Text(
+                          event.title,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: Text(
+                          '${dates.formatDateLabel(reminder.remindAt)} '
+                          '${dates.formatTimeLabel(reminder.remindAt)}',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.of(sheetContext).pop();
+                          onOpenEvent(event);
+                        },
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 Future<void> _showCoverImageDialog(BuildContext context, WidgetRef ref) async {
